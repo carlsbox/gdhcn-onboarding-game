@@ -189,11 +189,11 @@ export class World {
   }
 
   private route(id: RouteId, pts: number[][], color: string, dotted = false) {
-    const curve = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p[0], p[1], p[2])), false, 'catmullrom', 0.15);
-    const mat = glowMat(color, dotted ? 2.4 : 2.6);
+    const curve = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p[0], p[1], p[2])), false, dotted ? 'centripetal' : 'catmullrom', 0.15);
+    const mat = glowMat(color, dotted ? 3.0 : 2.6);
     if (dotted) {
-      const n = Math.floor(curve.getLength() / 0.45);
-      const g = new THREE.SphereGeometry(0.08, 10, 10);
+      const n = Math.floor(curve.getLength() / 0.42);
+      const g = new THREE.SphereGeometry(0.1, 10, 10);
       for (let i = 0; i <= n; i++) {
         const m = new THREE.Mesh(g, mat); m.position.copy(curve.getPointAt(i / n)); this.scene.add(m);
       }
@@ -212,7 +212,12 @@ export class World {
 
   private buildRoutes() {
     // paper road: email and letters arc straight from Ministry to Secretariat, never through the Gateway
-    this.route('paper', [[-9.4, 2.6, -4.4], [-7, 5.5, -7.4], [0, 7.2, -9.4], [7, 5.5, -7.4], [9.4, 2.6, -4.4]], C.paper, true);
+    // three sides: up out of the Ministry, straight across behind the territories, down into the Secretariat
+    this.route('paper', [
+      [-9.4, 2.6, -4.4], [-9.4, 2.2, -7.6], [-9.3, 1.7, -10.0], [-8.6, 1.5, -10.7],
+      [0, 1.5, -10.7],
+      [8.6, 1.5, -10.7], [9.3, 1.7, -10.0], [9.4, 2.2, -7.6], [9.4, 2.6, -4.4],
+    ], C.paper, true);
     this.route('ministry-backend', [[-12.2, 0.32, -1.2], [-12.2, 0.32, 1.2]], C.country);
     this.route('secretariat-ops', [[12.2, 0.32, -1.2], [12.2, 0.32, 1.2]], C.who);
     const bUat = [[-7.2, .3, 1.6], [-6.0, .3, 1.6], [-5.55, .05, 1.6], [-5.1, F, 1.5], [-4.75, F, 1.0], [-4.75, F, -2.4], [-4.5, F, -2.95], [-4.0, .05, -3.0], [-3.4, .3, -3.0], [-1.9, .3, -3.0]];

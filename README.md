@@ -10,7 +10,7 @@ Built for the GDHCN onboarding workshop (Kigali) and for ministry teams to repla
 - **Feedback sheet:** https://docs.google.com/spreadsheets/d/170X9_25-5S-s1FZbN8kieRopElHTl72NMmo2o3YUr0Y/edit
 - **Receiver:** Apps Script project "GDHCN game feedback receiver" (standalone, carl@osforge.co.za), web app deployment "Game feedback v1"
 
-To redeploy after changes, run the Netlify MCP deploy for site `23e62824-abda-4f95-a926-6a7e262056ab` from this folder; Netlify runs `npm run build` (see `netlify.toml`). The feedback URL is in `.env.production`.
+**Deploys are automatic:** the Netlify project is linked to `carlsbox/gdhcn-onboarding-game`, so every push to `main` builds (`npm run build`, see `netlify.toml`) and publishes. The feedback URL is in `.env.production`.
 
 ## Run it
 

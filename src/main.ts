@@ -6,12 +6,16 @@ import { Demo } from './demo/Demo';
 import { MOMENTS } from './game/scenario';
 import { applySettings, loadSettings, saveSettings, type Settings } from './game/settings';
 import { mountFeedback } from './ui/feedback';
+import { devOn } from './ui/dev';
+import { UseCasesPage } from './usecases/page';
 
 const app = document.getElementById('app')!;
 const world = new World(app);
 const ui = new UI(app);
 const game = new Game(world, ui);
 mountFeedback(app);
+const useCases = new UseCasesPage(app);
+addEventListener('open-usecases', () => useCases.open());
 
 world.onPlaceClick = id => {
   const p = world.places[id];
@@ -32,15 +36,19 @@ async function demo() {
   location.reload();
 }
 
-// #phase=B jumps straight into a phase; #demo plays the explainer
+// #phase=B jumps straight into a phase; #demo plays the explainer; with dev mode on, #m=7 opens a moment and #end the finish
 const phase = /phase=([A-E])/.exec(location.hash)?.[1];
-const start = phase ? Math.max(0, MOMENTS.findIndex(m => m.phase === phase)) : 0;
+const devMoment = devOn() ? /(?:^#|&)m=(\d+)/.exec(location.hash)?.[1] : undefined;
+const start = devMoment !== undefined ? Math.min(Number(devMoment), MOMENTS.length - 1)
+  : phase ? Math.max(0, MOMENTS.findIndex(m => m.phase === phase)) : 0;
 
 (async () => {
   const saved = loadSettings();
   use(saved);
+  useCases.openFromHash(); // #usecases or #usecase/<id> opens over the title screen
   if (location.hash === '#demo') return demo();
-  if (phase) return game.run(start);
+  if (devOn() && location.hash === '#end') return game.end();
+  if (phase || devMoment !== undefined) return game.run(start);
   const { mode, settings } = await ui.title(saved);
   saveSettings(settings);
   use(settings);

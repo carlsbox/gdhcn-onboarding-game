@@ -22,7 +22,27 @@ npm run build      # static files in dist/, host anywhere
 
 `dist/` uses relative paths, so it can sit in any folder on a web server.
 
-Facilitators can jump to a phase with the menu (☰) or a URL hash: `#phase=A` to `#phase=E`.
+Facilitators can jump to a phase from **⚙ Settings** in the top bar or with a URL hash: `#phase=A` to `#phase=E`.
+
+### Dev mode (reviewers)
+
+Open the game once with `#dev` in the URL (for example `http://localhost:5199/#dev`). That unlocks a **Dev mode** toggle under ⚙ Settings, remembered in that browser. With it on:
+
+- every stop on the bottom progress strip is clickable and opens that moment as if all earlier steps went right (`#m=7` does the same);
+- **⏭ End** in the top bar skips to the debrief and the completion splash (`#end`);
+- each wrong choice gets a red *preview* link that shows its set-back panel, including delayed ones, without costing days.
+
+### Use cases
+
+**▶ Use cases** in the top bar opens a gallery of the use-case films, with a page for each: *Mary's Yellow Card* (digital ICVP) and *Amina's Journey* (maternal care, International Patient Summary). Each page has the film, a summary, how the GDHCN helps, and why the use case matters. Deep links: `#usecases`, `#usecase/icvp`, `#usecase/maternal`. The pages open over whatever is on screen, so a game in progress isn't lost.
+
+To add a use case, put a 720p MP4 and a poster JPG in `public/video/` and add an entry to `src/usecases/data.ts`. The current films were compressed from the 1080p masters with `ffmpeg -i master.mp4 -vf scale=-2:720 -c:v libx264 -preset slow -crf 30 -maxrate 700k -bufsize 1400k -tune animation -c:a aac -b:a 80k -movflags +faststart out.mp4` (about 6–7 MB each).
+
+"GDHCN" in the top-left of the bar returns to the start screen. About this simulation (under ⚙ Settings) carries a small "Built by OS Forge" credit.
+
+### End of the game
+
+After the debrief, **Finish** opens a completion splash with links to the live WHO GDHCN page, the SMART Trust guide, the onboarding process and checklist, the smart-trust and tng-participant-template repositories, and gdhcn-support@who.int.
 
 ### Make it your country
 
@@ -68,7 +88,9 @@ Without the URL the tab still opens but says feedback is not connected.
 | `src/world/World.ts` | The three.js world: territories, roads, parcels, camera. |
 | `src/world/models.ts` | Buildings and shared materials (soft-glow look). |
 | `src/world/Bot.ts` | tng-bot, an original character. |
-| `src/ui/ui.ts`, `src/style.css` | HUD, desk panel, progress strip, debrief. |
+| `src/ui/ui.ts`, `src/style.css` | Top bar, HUD, desk panel, progress strip, debrief, completion splash. |
+| `src/ui/dev.ts` | Dev mode unlock and jumps. |
+| `src/usecases/data.ts`, `page.ts` | Use-case films: content, gallery and pages. |
 
 ### The world
 

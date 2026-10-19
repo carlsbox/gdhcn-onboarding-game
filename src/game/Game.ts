@@ -4,7 +4,7 @@ import { setFeedbackContext } from '../ui/feedback';
 import { PHASES } from './scenario';
 import type { Consequence, Moment, Travel } from './types';
 import type { World } from '../world/World';
-import type { Detour, UI } from '../ui/ui';
+import { splash, type Detour, type UI } from '../ui/ui';
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -19,17 +19,39 @@ export class Game {
 
   async run(start = 0) {
     this.ui.showChrome();
+    this.idealStateBefore(start);
     for (this.index = start; this.index < MOMENTS.length; this.index++) {
       await this.play(MOMENTS[this.index]);
     }
+    await this.finish();
+  }
+
+  /** Dev / facilitator jump to the end: debrief on the ideal path, then the splash. */
+  async end() {
+    this.ui.showChrome();
+    this.idealStateBefore(MOMENTS.length);
+    this.index = MOMENTS.length;
+    await this.finish();
+  }
+
+  /** Starting part-way: the world and the clock look as if every earlier step went right. */
+  private idealStateBefore(start: number) {
+    this.days = MOMENTS.slice(0, start).reduce((s, m) => s + m.days, 0);
+    const opened = MOMENTS.findIndex(m => m.success.effect === 'prod-open');
+    this.world.setProdOpen(opened >= 0 && start > opened);
+  }
+
+  private async finish() {
     this.world.mark(null);
     this.ui.hideDesk();
     await this.world.flyTo('home');
     this.ui.strip(MOMENTS.length, this.detours);
-    const ideal = MOMENTS.slice(start).reduce((s, m) => s + m.days, 0);
+    const ideal = MOMENTS.reduce((s, m) => s + m.days, 0);
     setFeedbackContext({ mode: 'debrief', where: 'Debrief', days: this.days, detours: this.detours.length });
     await this.ui.debrief({ days: this.days, ideal, detours: this.detours });
-    location.hash = '';
+    setFeedbackContext({ mode: 'debrief', where: 'Completion splash', days: this.days, detours: this.detours.length });
+    const next = await splash(document.getElementById('app')!);
+    location.hash = next === 'demo' ? 'demo' : '';
     location.reload();
   }
 

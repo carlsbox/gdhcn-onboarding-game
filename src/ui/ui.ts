@@ -1,6 +1,7 @@
 import { MOMENTS, PHASES, ROLES } from '../game/scenario';
 import type { ChecklistItem, Consequence, Doc, Moment, Phase } from '../game/types';
 import { DEFAULTS, deriveCode, settings, type Person, type Settings } from '../game/settings';
+import { devOn, devUnlocked, jumpTo, setDevOn } from './dev';
 
 const h = (html: string) => {
   const t = document.createElement('template');
@@ -25,24 +26,42 @@ export class UI {
     this.hudEl = this.mount('<div id="hud" class="glass hidden"></div>');
     this.statsEl = this.mount(`<div id="stats" class="glass hidden">
       <div class="stat"><span class="stat-n" id="days">0</span><span class="stat-l">game days</span></div>
-      <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">detours</span></div>
-      <button id="menu-btn" aria-label="Menu">☰</button></div>`);
+      <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">detours</span></div></div>`);
     this.stripEl = this.mount('<div id="strip" class="glass hidden"></div>');
     this.deskEl = this.mount('<div id="desk" class="glass"></div>');
     this.toastEl = this.mount('<div id="toast" class="glass"></div>');
+    // top bar: brand on the left, menu items on the right (more items can be added to .nav-items)
+    this.mount(`<nav id="topnav" class="glass">
+      <a class="nav-brand" href="${import.meta.env.BASE_URL}" data-go="home" title="Back to the start">GDHCN</a>
+      <span class="nav-title">Join the Network</span>
+      <div class="nav-items">
+        ${devOn() ? '<span class="dev-chip">DEV</span><button class="nav-btn" data-go="end" title="Jump to the end (dev)">⏭ End</button>' : ''}
+        <button class="nav-btn" data-go="usecases">▶ Use cases</button>
+        <button class="nav-btn" id="settings-btn" aria-haspopup="true">⚙ Settings</button>
+      </div></nav>`);
     this.menuEl = this.mount(`<div id="menu" class="glass">
       <button data-go="restart">Restart from the beginning</button>
       <div class="menu-l">Jump to a phase (facilitator)</div>
       ${PHASE_ORDER.map(p => `<button data-go="${p}">${p} · ${PHASES[p]}</button>`).join('')}
-      <button data-go="about">About this simulation</button></div>`);
-    this.statsEl.querySelector('#menu-btn')!.addEventListener('click', () => this.menuEl.classList.toggle('open'));
-    this.menuEl.addEventListener('click', e => {
-      const go = (e.target as HTMLElement).dataset.go;
-      if (!go) return;
+      <button data-go="about">About this simulation</button>
+      ${devUnlocked() ? `<div class="menu-l">Reviewer tools</div>
+      <label class="menu-toggle"><input type="checkbox" id="dev-toggle" ${devOn() ? 'checked' : ''}> Dev mode <span>clickable strip stops, previews, jump to end</span></label>` : ''}
+      </div>`);
+    document.getElementById('settings-btn')!.addEventListener('click', () => this.menuEl.classList.toggle('open'));
+    document.getElementById('dev-toggle')?.addEventListener('change', e => { setDevOn((e.target as HTMLInputElement).checked); location.reload(); });
+    const go = (target: string) => {
       this.menuEl.classList.remove('open');
-      if (go === 'about') { this.about(); return; }
-      location.hash = go === 'restart' ? '' : `phase=${go}`;
+      if (target === 'about') { this.about(); return; }
+      if (target === 'end') { jumpTo('end'); return; }
+      if (target === 'usecases') { dispatchEvent(new CustomEvent('open-usecases')); return; }
+      if (target === 'home') { location.hash = ''; location.reload(); return; }
+      location.hash = target === 'restart' ? '' : `phase=${target}`;
       location.reload();
+    };
+    this.menuEl.addEventListener('click', e => { const t = (e.target as HTMLElement).dataset.go; if (t) go(t); });
+    document.getElementById('topnav')!.addEventListener('click', e => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-go]')?.dataset.go;
+      if (t) { e.preventDefault(); go(t); }
     });
   }
 
@@ -121,7 +140,8 @@ export class UI {
       <h2>About this simulation</h2>
       <p>A learning tool that turns the WHO SMART Trust onboarding process into choices a country team makes. Step numbers refer to the published process at smart.who.int/trust, which remains the authority. The GDHCN Administrative and Operational Framework is authoritative for definitions.</p>
       <p>Simplifications: steps are grouped into moments, some checks are shown at a convenient point in the story, and game days are illustrative.</p>
-      <button class="primary">Close</button></div></div>`);
+      <button class="primary">Close</button>
+      <p class="built-by">Built by <a href="https://osforge.co.za" target="_blank" rel="noopener">OS Forge</a></p></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
   }
 
@@ -144,6 +164,10 @@ export class UI {
 
   strip(index: number, detours: Detour[]) {
     this.stripEl.innerHTML = routeSvg(index, detours, false);
+    if (!devOn()) return;
+    this.stripEl.classList.add('dev');
+    this.stripEl.querySelectorAll<SVGElement>('[data-i]').forEach(d =>
+      d.addEventListener('click', () => jumpTo(Number(d.dataset.i))));
   }
 
   // ---------- desk ----------
@@ -167,7 +191,17 @@ export class UI {
 
   ask(m: Moment, disabled: Set<string>): Promise<string> {
     const choices = m.choices!.map(c => `<button class="choice" data-id="${c.id}" ${disabled.has(c.id) ? 'disabled' : ''}>${c.text}${disabled.has(c.id) ? '<span class="tried">tried</span>' : ''}</button>`).join('');
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><div class="choices">${shuffle(choices)}</div>`);
+    const previews = devOn() ? m.choices!.filter(c => !c.correct).map(c =>
+      `<button class="dev-preview" data-p="${c.id}">preview: ${c.flag ? 'delayed set-back' : 'set-back'} for "${c.text.slice(0, 48)}${c.text.length > 48 ? '…' : ''}"</button>`).join('') : '';
+    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">DEV</span>${previews}</div>` : ''}`);
+    this.deskEl.querySelectorAll<HTMLButtonElement>('.dev-preview').forEach(b => b.addEventListener('click', () => {
+      const c = m.choices!.find(x => x.id === b.dataset.p)!;
+      if (c.consequence) this.preview(c.consequence);
+      else if (c.flag) {
+        const chk = MOMENTS.flatMap(x => x.checks ?? []).find(k => k.flag === c.flag);
+        if (chk) this.preview(chk.consequence, { fix: chk.fix, origin: m.title });
+      }
+    }));
     return new Promise(done => {
       this.deskEl.querySelectorAll<HTMLButtonElement>('.choice').forEach(b => b.addEventListener('click', () => done(b.dataset.id!)));
     });
@@ -188,6 +222,18 @@ export class UI {
   watch(m: Moment): Promise<void> {
     this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><button class="primary go">Watch</button>`);
     return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => done()));
+  }
+
+  /** Dev mode: show a set-back panel without playing it (no days, no detour). */
+  preview(c: Consequence, opts: { fix?: string; origin?: string } = {}) {
+    const el = this.mount(`<div class="overlay"><div class="title-card glass preview-card">
+      <div class="eyebrow">Dev preview · not counted</div>
+      <div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
+      <h2>${c.title}</h2>
+      ${opts.origin ? `<p class="origin">This would surface later, at its check. The call is made at: <b>${opts.origin}</b>.</p>` : ''}
+      <p><b>What happened.</b> ${c.what}</p>${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
+      <button class="primary">Close preview</button></div></div>`);
+    el.querySelector('button')!.addEventListener('click', () => el.remove());
   }
 
   returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<void> {
@@ -234,11 +280,44 @@ export class UI {
       </div>
       <h3>What to take back to your team</h3>
       <ol class="learn">${MOMENTS.filter(m => m.learn).map(m => `<li>${m.learn}</li>`).join('')}</ol>
-      <div class="debrief-actions"><button class="primary again">Play again</button><button class="ghost print">Print this debrief</button></div>
+      <div class="debrief-actions"><button class="primary again">Finish</button><button class="ghost print">Print this debrief</button></div>
     </div></div>`);
     el.querySelector('.print')!.addEventListener('click', () => window.print());
     return new Promise(done => el.querySelector('.again')!.addEventListener('click', () => { el.remove(); done(); }));
   }
+}
+
+// ---------- completion splash ----------
+
+const LINKS = [
+  { href: 'https://www.who.int/initiatives/global-digital-health-certification-network', title: 'WHO Global Digital Health Certification Network', sub: 'The live GDHCN page at WHO' },
+  { href: 'https://smart.who.int/trust/', title: 'WHO SMART Trust implementation guide', sub: 'The technical specification behind the network' },
+  { href: 'https://smart.who.int/trust/concepts_onboarding.html', title: 'Onboarding process', sub: 'The steps this simulation follows' },
+  { href: 'https://smart.who.int/trust/concepts_onboarding_checklist.html', title: 'Onboarding checklist', sub: 'Tools, certificates, repositories and tests, hands-on' },
+  { href: 'https://github.com/WorldHealthOrganization/smart-trust', title: 'smart-trust on GitHub', sub: 'Source of the guide, with participant data' },
+  { href: 'https://github.com/WorldHealthOrganization/tng-participant-template', title: 'tng-participant-template', sub: 'Template for your private key repositories' },
+  { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Where a Statement of Interest goes' },
+];
+
+export function splash(root: HTMLElement): Promise<'again' | 'demo'> {
+  const el = document.createElement('div');
+  el.id = 'splash';
+  el.className = 'overlay';
+  el.innerHTML = `<div class="splash-card glass">
+    <div class="splash-badge" aria-hidden="true">✓</div>
+    <div class="eyebrow">Simulation complete</div>
+    <h1>Congratulations. ${settings().country} is live.</h1>
+    <p class="lede">You took ${settings().country} from a Statement of Interest to the production Trust Network Gateway: eligibility, keys, the Letter of Application, identity checks, WHO's offline signing, testing and go-live.</p>
+    <h3>Take it further</h3>
+    <div class="splash-links">${LINKS.map(l => `<a href="${l.href}" target="_blank" rel="noopener"><b>${l.title}</b><span>${l.sub}</span></a>`).join('')}</div>
+    <p class="fine">This is a learning simulation. The WHO SMART Trust guide and the GDHCN Administrative and Operational Framework are the authority.</p>
+    <div class="title-actions"><button class="primary" data-n="again">Play again</button><button class="ghost" data-n="demo">▶ Watch the demo</button></div>
+  </div>`;
+  root.appendChild(el);
+  return new Promise(done => el.addEventListener('click', e => {
+    const n = (e.target as HTMLElement).dataset.n as 'again' | 'demo' | undefined;
+    if (n) { el.remove(); done(n); }
+  }));
 }
 
 // ---------- helpers ----------
@@ -296,7 +375,8 @@ function routeSvg(index: number, detours: Detour[], final: boolean) {
   }).join('');
   const dots = xs.map((x, i) => {
     const cls = i < index || final ? 'done' : i === index ? 'now' : '';
-    return `<circle cx="${x}" cy="${y}" r="${i === index && !final ? 9 : 5.5}" class="s-dot ${cls}"><title>${MOMENTS[i].title}</title></circle>`;
+    const hit = final ? '' : `<circle cx="${x}" cy="${y}" r="16" class="s-hit" data-i="${i}"><title>${i + 1}. ${MOMENTS[i].title}</title></circle>`;
+    return `<circle cx="${x}" cy="${y}" r="${i === index && !final ? 9 : 5.5}" class="s-dot ${cls}"><title>${MOMENTS[i].title}</title></circle>${hit}`;
   }).join('');
   return `<svg viewBox="0 0 ${W} ${final ? 110 : 56}" preserveAspectRatio="none">
     <line x1="${x0 - 8}" y1="${y}" x2="${x1 + 8}" y2="${y}" class="s-track"/>

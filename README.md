@@ -42,7 +42,7 @@ To add a use case, put a 720p MP4 and a poster JPG in `public/video/` and add an
 
 ### Easter eggs (keep quiet)
 
-- **The sad cat** peeks over the corner of about one set-back panel in three (every one in dev mode). Its mood follows the run's detours: unimpressed at 0–1, drooping at 2–4, under a rain cloud from 5. Clicking it gives a synthesised "mrrp" and a one-line tip.
+- **The sad cat** peeks over the corner of every set-back panel. Its mood follows the run's detours: unimpressed at 0–1, drooping at 2–4, under a rain cloud from 5. Clicking it gives a synthesised "mrrp" and a one-line tip.
 - **The crowned cat** sits on the completion badge after a run with zero detours.
 - **Three hidden cats** in the 3D world, only visible by orbiting: behind the offline SCA vault, asleep on the PROD gateway, and behind the Secretariat dome. Clicking one shows "Cat n of 3 found"; About then shows the count. All code is in `src/ui/cat.ts` and `cat()` in `src/world/models.ts`.
 

@@ -3,14 +3,13 @@
  * (sadder the more detours a run has taken), wears a crown on a perfect run, and
  * hides three times in the 3D world. Nothing here covers learning content.
  */
-import { devOn } from './dev';
 
 export type CatMood = 'meh' | 'sad' | 'gloomy' | 'crown';
 
 export const catMood = (detours: number): CatMood => (detours >= 5 ? 'gloomy' : detours >= 2 ? 'sad' : 'meh');
 
-/** Show the cat on roughly one set-back in three (always in dev mode, so it can be checked). */
-export const catShows = () => devOn() || Math.random() < 1 / 3;
+/** The cat shows on every set-back. */
+export const catShows = () => true;
 
 const SETBACK_LINES = [
   'Even the cat knows the SCA private key stays in the vault.',

@@ -8,6 +8,7 @@ import { applySettings, loadSettings, saveSettings, type Settings } from './game
 import { mountFeedback } from './ui/feedback';
 import { devOn } from './ui/dev';
 import { UseCasesPage } from './usecases/page';
+import { WORLD_CATS, findCat, mrrp } from './ui/cat';
 
 const app = document.getElementById('app')!;
 const world = new World(app);
@@ -16,6 +17,12 @@ const game = new Game(world, ui);
 mountFeedback(app);
 const useCases = new UseCasesPage(app);
 addEventListener('open-usecases', () => useCases.open());
+
+world.onCatClick = id => {
+  mrrp();
+  const n = findCat(id);
+  ui.toast(`🐾 <b>Cat ${n} of 3 found.</b><br>${WORLD_CATS[id]}`, 'info', 5200);
+};
 
 world.onPlaceClick = id => {
   const p = world.places[id];

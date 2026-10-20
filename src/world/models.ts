@@ -318,3 +318,30 @@ export function dashboard(): THREE.Group {
   add(screen, new THREE.BoxGeometry(2.9, 0.05, 0.02), glowMat(C.who, 1.8), 0, -0.93, 0.07, false);
   return root;
 }
+
+/** Easter egg: a small cat, sitting or curled up asleep. Ground at y = 0. */
+export function cat(sleeping = false): THREE.Group {
+  const g = new THREE.Group();
+  const fur = std('#e8a35c', { roughness: 0.8 }), pale = std('#fff3e3', { roughness: 0.8 }), pink = std('#f2a7b0');
+  if (sleeping) {
+    const body = add(g, new THREE.SphereGeometry(0.16, 20, 14), fur, 0, 0.09, 0); body.scale.set(1.35, 0.6, 1);
+    const head = add(g, new THREE.SphereGeometry(0.095, 18, 12), fur, 0.17, 0.08, 0.06); head.scale.set(1, 0.85, 1);
+    for (const s of [-1, 1]) {
+      const ear = add(g, new THREE.ConeGeometry(0.035, 0.07, 8), fur, 0.2, 0.15, 0.06 + s * 0.05);
+      ear.rotation.z = -0.5;
+    }
+    const tail = add(g, new THREE.TorusGeometry(0.17, 0.028, 8, 24, Math.PI * 1.1), fur, 0, 0.05, 0);
+    tail.rotation.x = Math.PI / 2; tail.rotation.z = 0.4;
+  } else {
+    const body = add(g, new THREE.SphereGeometry(0.15, 20, 14), fur, 0, 0.15, 0); body.scale.set(1, 1.15, 0.85);
+    add(g, new THREE.SphereGeometry(0.08, 14, 10), pale, 0, 0.17, 0.09);
+    add(g, new THREE.SphereGeometry(0.105, 18, 12), fur, 0, 0.35, 0.04);
+    for (const s of [-1, 1]) {
+      add(g, new THREE.ConeGeometry(0.04, 0.08, 8), fur, s * 0.06, 0.45, 0.04);
+      add(g, new THREE.ConeGeometry(0.022, 0.045, 8), pink, s * 0.06, 0.445, 0.055);
+    }
+    const tail = add(g, new THREE.TorusGeometry(0.12, 0.025, 8, 20, Math.PI), fur, -0.12, 0.08, -0.04);
+    tail.rotation.y = Math.PI / 2;
+  }
+  return g;
+}

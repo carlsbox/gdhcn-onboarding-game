@@ -2,6 +2,7 @@ import { MOMENTS, PHASES, ROLES } from '../game/scenario';
 import type { ChecklistItem, Consequence, Doc, Moment, Phase } from '../game/types';
 import { DEFAULTS, deriveCode, settings, type Person, type Settings } from '../game/settings';
 import { devOn, devUnlocked, jumpTo, setDevOn } from './dev';
+import { catLine, catMood, catShows, catsFound, catSvg, mrrp } from './cat';
 
 const h = (html: string) => {
   const t = document.createElement('template');
@@ -21,6 +22,7 @@ export class UI {
   private deskEl: HTMLElement;
   private toastEl: HTMLElement;
   private menuEl: HTMLElement;
+  private detourCount = 0;
 
   constructor(private root: HTMLElement) {
     this.hudEl = this.mount('<div id="hud" class="glass hidden"></div>');
@@ -141,6 +143,7 @@ export class UI {
       <p>A learning tool that turns the WHO SMART Trust onboarding process into choices a country team makes. Step numbers refer to the published process at smart.who.int/trust, which remains the authority. The GDHCN Administrative and Operational Framework is authoritative for definitions.</p>
       <p>Simplifications: steps are grouped into moments, some checks are shown at a convenient point in the story, and game days are illustrative.</p>
       <button class="primary">Close</button>
+      ${catsFound().length ? `<p class="built-by">🐾 Cats found: ${catsFound().length} of 3</p>` : ''}
       <p class="built-by">Built by <a href="https://osforge.co.za" target="_blank" rel="noopener">OS Forge</a></p></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
   }
@@ -158,6 +161,7 @@ export class UI {
   }
 
   stats(days: number, detours: number) {
+    this.detourCount = detours;
     this.statsEl.querySelector('#days')!.textContent = String(days);
     this.statsEl.querySelector('#detours')!.textContent = String(detours);
   }
@@ -224,6 +228,16 @@ export class UI {
     return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => done()));
   }
 
+  /** The easter-egg cat: a soft mrrp and one line of advice when clicked. */
+  private bindCat(scope: HTMLElement) {
+    const cat = scope.querySelector<HTMLButtonElement>('.desk-cat');
+    cat?.addEventListener('click', () => {
+      mrrp();
+      cat.classList.remove('mrrp'); void cat.offsetWidth; cat.classList.add('mrrp');
+      this.toast(`🐾 ${catLine()}`, 'info', 3200);
+    });
+  }
+
   /** Dev mode: show a set-back panel without playing it (no days, no detour). */
   preview(c: Consequence, opts: { fix?: string; origin?: string } = {}) {
     const el = this.mount(`<div class="overlay"><div class="title-card glass preview-card">
@@ -232,8 +246,10 @@ export class UI {
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This would surface later, at its check. The call is made at: <b>${opts.origin}</b>.</p>` : ''}
       <p><b>What happened.</b> ${c.what}</p>${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
-      <button class="primary">Close preview</button></div></div>`);
+      <button class="primary">Close preview</button>
+      <button class="desk-cat">${catSvg(catMood(this.detourCount))}</button></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
+    this.bindCat(el);
   }
 
   returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<void> {
@@ -244,7 +260,9 @@ export class UI {
       ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
       ${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}
       ${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
-      <button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button>`, 'returned');
+      <button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button>
+      ${catShows() ? `<button class="desk-cat" title="…">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
+    this.bindCat(this.deskEl);
     return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => { this.hideDesk(); done(); }));
   }
 
@@ -299,12 +317,12 @@ const LINKS = [
   { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Where a Statement of Interest goes' },
 ];
 
-export function splash(root: HTMLElement): Promise<'again' | 'demo'> {
+export function splash(root: HTMLElement, detours = 1): Promise<'again' | 'demo'> {
   const el = document.createElement('div');
   el.id = 'splash';
   el.className = 'overlay';
   el.innerHTML = `<div class="splash-card glass">
-    <div class="splash-badge" aria-hidden="true">✓</div>
+    <div class="splash-badge-wrap"><div class="splash-badge" aria-hidden="true">✓</div>${detours === 0 ? `<span class="splash-cat" title="A perfect run">${catSvg('crown')}</span>` : ''}</div>
     <div class="eyebrow">Simulation complete</div>
     <h1>Congratulations. ${settings().country} is live.</h1>
     <p class="lede">You took ${settings().country} from a Statement of Interest to the production Trust Network Gateway: eligibility, keys, the Letter of Application, identity checks, WHO's offline signing, testing and go-live.</p>

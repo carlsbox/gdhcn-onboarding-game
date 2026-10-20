@@ -8,7 +8,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {
-  C, add, backend, barrier, dashboard, gateway, glowMat, ministry, ministrySign, operations, plot, repos, secretariat, std, territory, tree,
+  C, add, backend, barrier, cat, dashboard, gateway, glowMat, ministry, ministrySign, operations, plot, repos, secretariat, std, territory, tree,
 } from './models';
 import { Bot } from './Bot';
 
@@ -49,6 +49,8 @@ export class World {
   private gatewayRings: THREE.Mesh[] = [];
   private anchor!: THREE.Mesh;
   onPlaceClick: ((id: PlaceId) => void) | null = null;
+  onCatClick: ((id: string) => void) | null = null;
+  private cats = new Map<THREE.Object3D, string>();
 
   constructor(el: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -101,6 +103,7 @@ export class World {
 
     this.buildWorld();
     this.buildRoutes();
+    this.hideCats();
 
     this.marker = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.06, 12, 128), glowMat('#ffffff', 1.6));
     this.marker.rotation.x = Math.PI / 2;
@@ -377,6 +380,21 @@ export class World {
 
   // ---------- input and loop ----------
 
+  /** Easter egg: three cats, each tucked where you only see it by orbiting the camera. */
+  private hideCats() {
+    const spots: [string, boolean, number, number, number, number][] = [
+      ['country', false, -7.9, 0.32, 2.7, Math.PI],     // behind the offline SCA vault
+      ['gateway', true, -0.95, 0.68, 2.35, 0.6],         // asleep on the warm PROD gateway
+      ['who', false, 10.4, 0.32, -5.75, Math.PI * 0.9],  // behind the Secretariat dome
+    ];
+    for (const [id, sleeping, x, y, z, ry] of spots) {
+      const c = cat(sleeping);
+      c.position.set(x, y, z); c.rotation.y = ry;
+      this.scene.add(c);
+      this.cats.set(c, id);
+    }
+  }
+
   private bindPointer() {
     const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
     const groups = () => Object.entries(this.places) as [PlaceId, Place][];
@@ -389,14 +407,23 @@ export class World {
       while (o) { const found = groups().find(([, p]) => p.group === o); if (found) return found[0]; o = o.parent; }
       return null;
     };
+    const catHit = (e: PointerEvent): string | null => {
+      mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+      ray.setFromCamera(mouse, this.camera);
+      const hits = ray.intersectObjects([...this.cats.keys()], true);
+      let o: THREE.Object3D | null = hits[0]?.object ?? null;
+      while (o) { const id = this.cats.get(o); if (id) return id; o = o.parent; }
+      return null;
+    };
     let down: [number, number] | null = null;
     const el = this.renderer.domElement;
     el.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
     el.addEventListener('pointerup', e => {
       if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+      const kitty = catHit(e); if (kitty) { this.onCatClick?.(kitty); return; }
       const id = hit(e); if (id && this.onPlaceClick) this.onPlaceClick(id);
     });
-    el.addEventListener('pointermove', e => { el.style.cursor = hit(e) ? 'pointer' : 'grab'; });
+    el.addEventListener('pointermove', e => { el.style.cursor = catHit(e) || hit(e) ? 'pointer' : 'grab'; });
   }
 
   private loop = () => {

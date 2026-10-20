@@ -50,7 +50,7 @@ export class Game {
     setFeedbackContext({ mode: 'debrief', where: 'Debrief', days: this.days, detours: this.detours.length });
     await this.ui.debrief({ days: this.days, ideal, detours: this.detours });
     setFeedbackContext({ mode: 'debrief', where: 'Completion splash', days: this.days, detours: this.detours.length });
-    const next = await splash(document.getElementById('app')!);
+    const next = await splash(document.getElementById('app')!, this.detours.length);
     location.hash = next === 'demo' ? 'demo' : '';
     location.reload();
   }

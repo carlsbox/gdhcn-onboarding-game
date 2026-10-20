@@ -24,6 +24,14 @@ npm run build      # static files in dist/, host anywhere
 
 Facilitators can jump to a phase from **⚙ Settings** in the top bar or with a URL hash: `#phase=A` to `#phase=E`.
 
+### See it in action
+
+To the right of the title card, a **See it in action** panel lists the narrated demo and each use-case film as a tile with a still thumbnail, a one-line description and its running time. The demo tile starts the demo; a film tile opens that film's use-case page, and closing it returns to the title. Below 1100px wide the panel stacks under the title card. Tiles are generated from `src/usecases/data.ts`, so a new use case appears here automatically.
+
+### Explore the world
+
+**🧭 Explore the world** on the title screen frees the camera before playing: drag to rotate, Shift + drag or the arrow keys to move (right-drag also works; two fingers on touch), scroll or pinch to zoom (moving is kept inside the world). A tip card at the top spells this out and fades after a few seconds. Clicking a building, or one of the place chips along the bottom, flies there and opens a card: what the place is, what lives there, and which game moments happen there. **⟲ Reset view** returns to the overview, **Start onboarding** begins the game and **← Back** returns to the title. During the game, panning also works and the **⟲** button in the stats box flies back to the moment's view.
+
 ### Dev mode (reviewers)
 
 Open the game once with `#dev` in the URL (for example `http://localhost:5199/#dev`). That unlocks a **Dev mode** toggle under ⚙ Settings, remembered in that browser. With it on:
@@ -96,6 +104,7 @@ Without the URL the tab still opens but says feedback is not connected.
 | `src/world/Bot.ts` | tng-bot, an original character. |
 | `src/ui/ui.ts`, `src/style.css` | Top bar, HUD, desk panel, progress strip, debrief, completion splash. |
 | `src/ui/dev.ts` | Dev mode unlock and jumps. |
+| `src/ui/explore.ts` | Explore-the-world mode: place cards, chips, reset view. |
 | `src/usecases/data.ts`, `page.ts` | Use-case films: content, gallery and pages. |
 
 ### The world

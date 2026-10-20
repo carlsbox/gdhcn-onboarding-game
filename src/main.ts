@@ -9,6 +9,7 @@ import { mountFeedback } from './ui/feedback';
 import { devOn } from './ui/dev';
 import { UseCasesPage } from './usecases/page';
 import { WORLD_CATS, findCat, mrrp } from './ui/cat';
+import { explore } from './ui/explore';
 
 const app = document.getElementById('app')!;
 const world = new World(app);
@@ -17,6 +18,8 @@ const game = new Game(world, ui);
 mountFeedback(app);
 const useCases = new UseCasesPage(app);
 addEventListener('open-usecases', () => useCases.open());
+addEventListener('open-usecase', e => useCases.open((e as CustomEvent<string>).detail));
+addEventListener('reset-view', () => world.resetView());
 
 world.onCatClick = id => {
   mrrp();
@@ -56,11 +59,16 @@ const start = devMoment !== undefined ? Math.min(Number(devMoment), MOMENTS.leng
   if (location.hash === '#demo') return demo();
   if (devOn() && location.hash === '#end') return game.end();
   if (phase || devMoment !== undefined) return game.run(start);
-  const { mode, settings } = await ui.title(saved);
-  saveSettings(settings);
-  use(settings);
-  if (mode === 'demo') return demo();
-  await game.run(0);
+  let current = saved;
+  for (;;) {
+    const { mode, settings } = await ui.title(current);
+    saveSettings(settings);
+    use(settings);
+    current = settings;
+    if (mode === 'demo') return demo();
+    if (mode === 'explore' && (await explore(world, app)) === 'back') continue; // back to the title screen
+    return game.run(0);
+  }
 })();
 
 // handy for debugging in the browser console

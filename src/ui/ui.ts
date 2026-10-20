@@ -3,6 +3,7 @@ import type { ChecklistItem, Consequence, Doc, Moment, Phase } from '../game/typ
 import { DEFAULTS, deriveCode, settings, type Person, type Settings } from '../game/settings';
 import { devOn, devUnlocked, jumpTo, setDevOn } from './dev';
 import { catLine, catMood, catShows, catsFound, catSvg, mrrp } from './cat';
+import { USE_CASES } from '../usecases/data';
 
 const h = (html: string) => {
   const t = document.createElement('template');
@@ -28,7 +29,9 @@ export class UI {
     this.hudEl = this.mount('<div id="hud" class="glass hidden"></div>');
     this.statsEl = this.mount(`<div id="stats" class="glass hidden">
       <div class="stat"><span class="stat-n" id="days">0</span><span class="stat-l">game days</span></div>
-      <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">detours</span></div></div>`);
+      <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">detours</span></div>
+      <button id="reset-view" title="Reset the view">⟲</button></div>`);
+    this.statsEl.querySelector('#reset-view')!.addEventListener('click', () => dispatchEvent(new CustomEvent('reset-view')));
     this.stripEl = this.mount('<div id="strip" class="glass hidden"></div>');
     this.deskEl = this.mount('<div id="desk" class="glass"></div>');
     this.toastEl = this.mount('<div id="toast" class="glass"></div>');
@@ -71,9 +74,10 @@ export class UI {
 
   // ---------- title ----------
 
-  title(initial: Settings): Promise<{ mode: 'play' | 'demo'; settings: Settings }> {
+  title(initial: Settings): Promise<{ mode: 'play' | 'demo' | 'explore'; settings: Settings }> {
     const n = initial.names;
     const el = this.mount(`<div id="title" class="overlay">
+      <div class="title-wrap">
       <div class="title-card glass">
         <div class="eyebrow">WHO Global Digital Health Certification Network</div>
         <h1>Join the Network</h1>
@@ -98,8 +102,21 @@ export class UI {
           <div><span class="dot c-github"></span><b>GitHub</b><br>where your public keys wait for tng-bot</div>
         </div>
         <p class="small">Each moment asks your team to make a call. Wrong calls send things back, sometimes much later. Roads matter: <span class="paper">paper travels by email</span>, <span class="data">keys travel by data</span>.</p>
-        <div class="title-actions"><button class="primary" id="start">Start onboarding</button><button class="ghost" id="watch-demo">▶ Watch the demo</button></div>
+        <div class="title-actions"><button class="primary" id="start">Start onboarding</button><button class="ghost" id="watch-demo">▶ Watch the demo</button><button class="ghost" id="explore-btn">🧭 Explore the world</button></div>
         <p class="fine">Based on WHO SMART Trust (smart.who.int/trust). The sample country and people are fictional. Game days are illustrative, not WHO timelines.</p>
+      </div>
+      <aside class="title-side glass">
+        <div class="eyebrow">See it in action</div>
+        <p class="side-lede">Short films showing what onboarding involves and what the network does once a country is live.</p>
+        <button class="side-tile" id="side-demo">
+          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">4 min</span></span>
+          <span class="side-text"><span class="uc-tag">Narrated demo · this game</span><b>How onboarding works</b><span class="uc-sub">The ideal path from first email to go-live, in nine steps</span></span>
+        </button>
+        ${USE_CASES.map(u => `<button class="side-tile" data-uc="${u.id}">
+          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}${u.poster}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
+          <span class="side-text"><span class="uc-tag">${u.tag}</span><b>${u.title}</b><span class="uc-sub">${u.subtitle}</span></span>
+        </button>`).join('')}
+      </aside>
       </div></div>`);
     const $ = <T extends HTMLElement>(q: string) => el.querySelector(q) as T;
     const country = $<HTMLInputElement>('#s-country'), code = $<HTMLInputElement>('#s-code');
@@ -127,13 +144,17 @@ export class UI {
       return { country: c, code: (code.value.trim() || deriveCode(c)).toUpperCase(), names };
     };
     return new Promise(done => {
-      const go = (mode: 'play' | 'demo') => {
+      const go = (mode: 'play' | 'demo' | 'explore') => {
         el.classList.add('gone');
         setTimeout(() => el.remove(), 500);
         done({ mode, settings: read() });
       };
       $('#start').addEventListener('click', () => go('play'));
       $("#watch-demo").addEventListener('click', () => go('demo'));
+      $('#explore-btn').addEventListener('click', () => go('explore'));
+      $('#side-demo').addEventListener('click', () => go('demo'));
+      el.querySelectorAll<HTMLElement>('.side-tile[data-uc]').forEach(t =>
+        t.addEventListener('click', () => dispatchEvent(new CustomEvent('open-usecase', { detail: t.dataset.uc }))));
     });
   }
 

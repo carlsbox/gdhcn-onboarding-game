@@ -83,6 +83,12 @@ export class World {
     this.controls.target.copy(this.home.target);
     this.controls.enableDamping = true;
     this.controls.maxPolarAngle = 1.25;
+    this.controls.enablePan = true; // right-drag, Shift/Ctrl/Cmd + drag, two fingers, or arrow keys; target kept inside the world below
+    this.controls.keyPanSpeed = 20;
+    // arrow keys pan once the world has been clicked (so typing in the title fields never moves the camera)
+    this.renderer.domElement.tabIndex = 0;
+    this.renderer.domElement.style.outline = 'none';
+    this.controls.listenToKeyEvents(this.renderer.domElement);
     this.controls.minDistance = 6;
     this.controls.maxDistance = 90;
     this.controls.screenSpacePanning = false;
@@ -252,7 +258,13 @@ export class World {
   }
 
   /** Fly the camera to a place (or home). With a desk open, the place sits left of centre. */
+  private lastView: { where: PlaceId | 'home'; opts: { desk?: boolean; caption?: boolean } } = { where: 'home', opts: {} };
+
+  /** Fly back to wherever the game or demo last put the camera. */
+  resetView() { return this.flyTo(this.lastView.where, { ...this.lastView.opts, dur: 1 }); }
+
   flyTo(where: PlaceId | 'home', opts: { desk?: boolean; caption?: boolean; dur?: number } = {}): Promise<void> {
+    this.lastView = { where, opts: { desk: opts.desk, caption: opts.caption } };
     let p1: THREE.Vector3, t1: THREE.Vector3;
     // a caption in the bottom-left: aim below-left of the subject so it sits up and to the right
     const cap = opts.caption ? new THREE.Vector3(-2.2, 0, 2.6) : new THREE.Vector3();
@@ -426,6 +438,27 @@ export class World {
     el.addEventListener('pointermove', e => { el.style.cursor = catHit(e) || hit(e) ? 'pointer' : 'grab'; });
   }
 
+  /** Keep panning inside the world: move target and camera together back within bounds. */
+  private clampView() {
+    const t = this.controls.target;
+    // safety net: if the camera ever ends up invalid, put it back on the overview
+    if (!Number.isFinite(this.camera.position.x + this.camera.position.y + this.camera.position.z + t.x + t.y + t.z)) {
+      this.fly = null;
+      this.camera.position.copy(this.home.pos);
+      t.copy(this.home.target);
+      return;
+    }
+    const c = new THREE.Vector3(
+      THREE.MathUtils.clamp(t.x, -17, 17),
+      THREE.MathUtils.clamp(t.y, -0.6, 4),
+      THREE.MathUtils.clamp(t.z, -12, 16),
+    );
+    if (c.equals(t)) return;
+    const d = c.clone().sub(t);
+    t.copy(c);
+    this.camera.position.add(d);
+  }
+
   private loop = () => {
     const dt = Math.min(this.clock.getDelta(), 0.25), now = this.clock.elapsedTime;
     for (const b of this.badges) { b.position.y = 2.3 + Math.sin(now * 1.4) * 0.12; b.rotation.y = Math.sin(now * 0.6) * 0.35; }
@@ -458,6 +491,7 @@ export class World {
       if (f.u >= 1) { this.fly = null; f.done(); }
     }
     this.controls.update();
+    this.clampView();
     this.composer.render();
     this.labels.render(this.scene, this.camera);
     requestAnimationFrame(this.loop);

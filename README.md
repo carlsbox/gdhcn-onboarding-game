@@ -24,6 +24,8 @@ npm run build      # static files in dist/, host anywhere
 
 Facilitators can jump to a phase from **⚙ Settings** in the top bar or with a URL hash: `#phase=A` to `#phase=E`.
 
+During play, the progress strip has **⌂ Home** at its left end and **↺ Restart** at its right. Both ask for confirmation first. Restart starts the run again at the first moment with the same country and team (via `#restart`, which skips the title). Home returns to the title screen. **Restart from the beginning** in ⚙ Settings does the same as the strip's Restart. On phones the two buttons show as icons only.
+
 ### See it in action
 
 To the right of the title card, a **See it in action** panel lists the narrated demo and each use-case film as a tile with a still thumbnail, a one-line description and its running time. The demo tile starts the demo; a film tile opens that film's use-case page, and closing it returns to the title. Below 1100px wide the panel stacks under the title card. Tiles are generated from `src/usecases/data.ts`, so a new use case appears here automatically.

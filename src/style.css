@@ -91,7 +91,12 @@ button { font: inherit; color: inherit; }
 
 /* ---------- progress strip ---------- */
 /* capped so phase labels don't stretch on wide screens; centred in the space left of the Feedback button */
-#strip { position: fixed; left: 16px; right: 164px; bottom: 14px; height: 64px; padding: 4px 8px; max-width: 920px; margin: 0 auto; }
+#strip { position: fixed; left: 16px; right: 164px; bottom: 14px; height: 64px; padding: 4px 8px; max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 8px; }
+.strip-route { flex: 1; min-width: 0; height: 100%; }
+.strip-btn { flex: none; border: 0; background: #e9ebf8; border-radius: 10px; padding: 8px 11px; font-weight: 650; font-size: 13px; cursor: pointer; white-space: nowrap; color: var(--ink); }
+.strip-btn:hover { background: #dde1f5; }
+.confirm .title-card { max-width: 440px; }
+.confirm-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 #strip svg, .route svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .s-track { stroke: #d3d7ee; stroke-width: 6; stroke-linecap: round; }
 .s-phase { stroke-width: 6; stroke-linecap: round; opacity: .35; }
@@ -219,7 +224,9 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 @media (max-width: 820px) {
   #fb-btn span { display: none; }
   #fb-btn { padding: 0 16px; }
-  #strip { right: 84px; }
+  #strip { right: 84px; gap: 4px; }
+  .strip-btn { padding: 8px 9px; font-size: 15px; }
+  .strip-btn span { display: none; }
   #hud { right: 16px; max-width: none; padding: 10px 12px; }
   .hud-title { font-size: 16px; }
   #stats { top: auto; bottom: 86px; right: 16px; padding: 6px 8px 6px 12px; }

@@ -20,6 +20,7 @@ export class UI {
   private hudEl: HTMLElement;
   private statsEl: HTMLElement;
   private stripEl: HTMLElement;
+  private routeEl: HTMLElement;
   private deskEl: HTMLElement;
   private toastEl: HTMLElement;
   private menuEl: HTMLElement;
@@ -32,7 +33,17 @@ export class UI {
       <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">detours</span></div>
       <button id="reset-view" title="Reset the view">⟲</button></div>`);
     this.statsEl.querySelector('#reset-view')!.addEventListener('click', () => dispatchEvent(new CustomEvent('reset-view')));
-    this.stripEl = this.mount('<div id="strip" class="glass hidden"></div>');
+    // progress strip: Home on the left, the subway route, Restart on the right
+    this.stripEl = this.mount(`<div id="strip" class="glass hidden">
+      <button class="strip-btn" data-leave="home" title="Back to the title screen">⌂ <span>Home</span></button>
+      <div class="strip-route"></div>
+      <button class="strip-btn" data-leave="restart" title="Restart onboarding from the first step">↺ <span>Restart</span></button></div>`);
+    this.routeEl = this.stripEl.querySelector('.strip-route')!;
+    this.stripEl.querySelectorAll<HTMLElement>('[data-leave]').forEach(b =>
+      b.addEventListener('click', async () => {
+        const where = b.dataset.leave as 'restart' | 'home';
+        if (await this.confirmLeave(where)) go(where);
+      }));
     this.deskEl = this.mount('<div id="desk" class="glass"></div>');
     this.toastEl = this.mount('<div id="toast" class="glass"></div>');
     // top bar: brand on the left, menu items on the right (more items can be added to .nav-items)
@@ -60,7 +71,7 @@ export class UI {
       if (target === 'end') { jumpTo('end'); return; }
       if (target === 'usecases') { dispatchEvent(new CustomEvent('open-usecases')); return; }
       if (target === 'home') { location.hash = ''; location.reload(); return; }
-      location.hash = target === 'restart' ? '' : `phase=${target}`;
+      location.hash = target === 'restart' ? 'restart' : `phase=${target}`; // #restart skips the title
       location.reload();
     };
     this.menuEl.addEventListener('click', e => { const t = (e.target as HTMLElement).dataset.go; if (t) go(t); });
@@ -188,11 +199,32 @@ export class UI {
   }
 
   strip(index: number, detours: Detour[]) {
-    this.stripEl.innerHTML = routeSvg(index, detours, false);
+    this.routeEl.innerHTML = routeSvg(index, detours, false);
     if (!devOn()) return;
     this.stripEl.classList.add('dev');
-    this.stripEl.querySelectorAll<SVGElement>('[data-i]').forEach(d =>
+    this.routeEl.querySelectorAll<SVGElement>('[data-i]').forEach(d =>
       d.addEventListener('click', () => jumpTo(Number(d.dataset.i))));
+  }
+
+  /** Ask before throwing away a run in progress. Resolves true to go ahead. */
+  private confirmLeave(where: 'restart' | 'home'): Promise<boolean> {
+    const days = this.statsEl.querySelector('#days')!.textContent;
+    const lost = `Your progress in this run (${days} game days, ${this.detourCount} detour${this.detourCount === 1 ? '' : 's'}) will be lost.`;
+    const copy = where === 'restart'
+      ? { h: 'Restart onboarding?', p: `${lost} You start again at the Statement of Interest, with the same country and team.`, ok: '↺ Restart' }
+      : { h: 'Go back to the start?', p: `${lost} You return to the title screen; your country and team names are kept.`, ok: '⌂ Go home' };
+    const el = this.mount(`<div class="overlay confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-h"><div class="title-card glass">
+      <h2 id="confirm-h">${copy.h}</h2><p>${copy.p}</p>
+      <div class="confirm-actions"><button class="primary" data-ok>${copy.ok}</button><button class="ghost" data-cancel>Cancel</button></div></div></div>`);
+    return new Promise(done => {
+      const close = (ok: boolean) => { removeEventListener('keydown', onKey); el.remove(); done(ok); };
+      const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(false); };
+      addEventListener('keydown', onKey);
+      el.querySelector('[data-ok]')!.addEventListener('click', () => close(true));
+      el.querySelector('[data-cancel]')!.addEventListener('click', () => close(false));
+      el.addEventListener('click', e => { if (e.target === el) close(false); });
+      el.querySelector<HTMLElement>('[data-cancel]')!.focus();
+    });
   }
 
   // ---------- desk ----------

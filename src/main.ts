@@ -59,6 +59,10 @@ const start = devMoment !== undefined ? Math.min(Number(devMoment), MOMENTS.leng
   if (location.hash === '#demo') return demo();
   if (devOn() && location.hash === '#end') return game.end();
   if (phase || devMoment !== undefined) return game.run(start);
+  if (location.hash === '#restart') { // strip or menu Restart: straight back to moment 1
+    history.replaceState(null, '', location.pathname + location.search);
+    return game.run(0);
+  }
   let current = saved;
   for (;;) {
     const { mode, settings } = await ui.title(current);

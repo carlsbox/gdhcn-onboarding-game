@@ -474,8 +474,8 @@ export const MOMENTS: Moment[] = [
   // ---------------- D · Test and go live ----------------
   {
     id: 'connect', phase: 'D', title: 'Connect to UAT', steps: 'Steps 60–61', place: 'backend', role: 'technical', type: 'choice',
-    brief: "{technicalFirst} connects {country}'s backend to the UAT gateway for the first time.",
-    docs: [{ kind: 'terminal', title: 'Connectivity test', lines: ['> curl -v https://tng-uat.who.int/trustList \\', '    --cert ????.pem --key ????_key.pem'], mark: [1] }],
+    brief: "{technicalFirst} connects {country}'s backend to the [[uat|UAT]] gateway for the first time. Testing can run on [[dev|DEV]], UAT or [[prod|PROD]]; this example uses UAT.",
+    docs: [{ kind: 'terminal', title: 'Connectivity test', lines: ['$ curl -v https://tng-uat.who.int/trustList \\', '    --cert ????.pem --key ????_key.pem'], mark: [1] }],
     prompt: "Which certificate proves your backend's identity to the Gateway?",
     choices: [
       { id: 'tls', correct: true, text: 'The TLS client certificate and its key' },

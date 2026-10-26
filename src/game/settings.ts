@@ -130,7 +130,7 @@ const initials = (full: string) => parts(full).slice(0, 2).map(p => p[0] ?? '').
 export function tokens(s: Settings): Record<string, string> {
   const code = s.code.toUpperCase();
   const code3 = alpha3(code);
-  const domain = `health.${code3.toLowerCase()}`;
+  const domain = 'health.gov'; // one neutral government domain; country codes in addresses confused players
   const km = parts(s.names.keymaster).map(ascii).filter(Boolean);
   const kmLocal = km.length > 1 ? `${km[0]}.${km[km.length - 1]}` : km[0] ?? 'keymaster';
   return {

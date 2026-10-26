@@ -442,6 +442,10 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 .uc-sub { font-size: 14px; color: var(--ink-soft); line-height: 1.4; }
 .uc-sub.big { font-size: 17px; margin: 0 0 14px; }
 .uc-video { width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; background: #0f1430; display: block; box-shadow: 0 10px 30px rgba(30, 34, 80, .25); }
+.uc-lang { display: inline-flex; gap: 2px; padding: 3px; margin: 0 0 10px; background: #e4e7f6; border-radius: 10px; }
+.uc-lang button { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 650; padding: 5px 14px; border-radius: 8px; cursor: pointer; }
+.uc-lang button[aria-pressed="true"] { background: #fff; color: var(--who); box-shadow: 0 1px 4px rgba(70, 80, 150, .22); }
+.uc-lang button:focus-visible { outline: 2px solid var(--who); outline-offset: 1px; }
 .uc-idea { margin: 18px 0 0; padding: 12px 16px; border-left: 4px solid var(--network); background: #effbf9; border-radius: 0 12px 12px 0; font-size: 16.5px; font-weight: 650; }
 .uc-how { padding-left: 20px; line-height: 1.55; font-size: 15px; }
 .uc-how li { margin-bottom: 6px; }

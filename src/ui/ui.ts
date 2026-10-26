@@ -99,14 +99,13 @@ export class UI {
         <p class="lede">Take your country from a first email to live on the production Trust Network Gateway, the way the WHO SMART Trust guidance sets it out.</p>
         <div class="setup">
           <label class="f-country">Your country<input id="s-country" maxlength="32" autocomplete="off"></label>
-          <label class="f-code">Code<input id="s-code" maxlength="3" autocomplete="off"></label>
+          <label class="f-code">3-letter code<input id="s-code" maxlength="3" autocomplete="off"></label>
         </div>
-        <details class="adv"><summary>Advanced: name your team</summary>
+        <p class="code-hint">ISO 3166 alpha-3 where one exists. Used in your repository names.</p>
+        <details class="adv"><summary>Your team: who does what</summary>
           <div class="team">
-            <label><span class="avatar r-business">BO</span>Business Owner<input data-p="business"></label>
-            <label><span class="avatar r-keymaster">KM</span>Key Master<input data-p="keymaster"></label>
-            <label><span class="avatar r-legal">LG</span>Legal<input data-p="legal"></label>
-            <label><span class="avatar r-technical">TC</span>Technical<input data-p="technical"></label>
+            ${([['business', 'BO'], ['keymaster', 'KM'], ['legal', 'LG'], ['technical', 'TC']] as const).map(([r, ini]) =>
+              `<label><span class="avatar r-${r}">${ini}</span>${ROLES[r].title}<input data-p="${r}"><span class="job">${ROLES[r].job}</span></label>`).join('')}
           </div>
           <button class="link reset" type="button">Reset to the sample country (Country XC)</button>
         </details>
@@ -136,7 +135,7 @@ export class UI {
     const $ = <T extends HTMLElement>(q: string) => el.querySelector(q) as T;
     const country = $<HTMLInputElement>('#s-country'), code = $<HTMLInputElement>('#s-code');
     const people = [...el.querySelectorAll<HTMLInputElement>('.team input')];
-    let codeTouched = initial.code !== deriveCode(initial.country);
+    let codeTouched = initial.code !== deriveCode(initial.country) && !(initial.country === DEFAULTS.country && initial.code === DEFAULTS.code);
     const fillForm = (s: Settings) => {
       country.value = s.country; code.value = s.code;
       people.forEach(i => { i.value = s.names[i.dataset.p as Person]; });
@@ -148,15 +147,17 @@ export class UI {
       $('.t-cname').textContent = country.value || 'Your country';
     });
     code.addEventListener('input', () => {
-      codeTouched = true;
       code.value = code.value.toUpperCase().replace(/[^A-Z]/g, '');
+      codeTouched = code.value !== ''; // clearing the field hands it back to the country name
     });
     $('.reset').addEventListener('click', () => { codeTouched = false; fillForm(structuredClone(DEFAULTS)); });
     const read = (): Settings => {
       const names = { ...DEFAULTS.names };
       people.forEach(i => { if (i.value.trim()) names[i.dataset.p as Person] = i.value.trim(); });
       const c = country.value.trim() || DEFAULTS.country;
-      return { country: c, code: (code.value.trim() || deriveCode(c)).toUpperCase(), names };
+      const typed = code.value.trim().toUpperCase();
+      const derived = country.value.trim() ? deriveCode(c) : DEFAULTS.code;
+      return { country: c, code: typed.length === 3 ? typed : derived, names };
     };
     return new Promise(done => {
       const go = (mode: 'play' | 'demo' | 'explore') => {

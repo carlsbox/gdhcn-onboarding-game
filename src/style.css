@@ -257,6 +257,8 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
   padding: 10px 12px; border-radius: 12px; border: 1px solid #d6daf0; background: #fff; outline: none;
 }
 .setup input:focus, .team input:focus { border-color: #8fa6ec; box-shadow: 0 0 0 3px rgba(111, 156, 240, .2); }
+.code-hint { font-size: 12px; color: var(--ink-soft); margin: 0 0 6px; }
+.team .job { font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.4; color: var(--ink-soft); }
 .f-code input { text-transform: uppercase; text-align: center; }
 .adv { margin: 4px 0 6px; font-size: 14px; }
 .adv summary { cursor: pointer; font-weight: 650; color: var(--ink-soft); padding: 4px 0; }

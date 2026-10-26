@@ -6,7 +6,7 @@ import type { Moment, Phase, Role } from './types';
  * Step numbers refer to that page. Game days are illustrative, not WHO timelines.
  *
  * Text uses {tokens} filled in at runtime from the player's settings (see settings.ts):
- * {country}, {code}, {codeLower}, {code3}, {code3Lower} (ISO 3-letter, for repo names), {domain}, {business}, {keymaster}, {legal}, {technical},
+ * {country}, {code}, {codeLower} (3-letter, same as {code3}), {code3}, {code3Lower} (ISO 3-letter, for repo names), {domain}, {business}, {keymaster}, {legal}, {technical},
  * {keymasterFirst}, {legalFirst}, {technicalFirst}, {keymasterEmail}, {keymasterPersonal}.
  * Defaults: Country XC, with fictional people Dr Zawadi Nkosi, Kwame Mensah, Sara Diallo, Tendai Banda.
  */
@@ -20,11 +20,15 @@ export const PHASES: Record<Phase, string> = {
 };
 
 /** Names and initials are overwritten from the player's settings at start-up. */
-export const ROLES: Record<Role, { name: string; title: string; initials: string }> = {
-  business: { name: 'Dr Zawadi Nkosi', title: 'Business Owner', initials: 'ZN' },
-  keymaster: { name: 'Kwame Mensah', title: 'Key Master', initials: 'KM' },
-  legal: { name: 'Sara Diallo', title: 'Legal', initials: 'SD' },
-  technical: { name: 'Tendai Banda', title: 'Technical', initials: 'TB' },
+export const ROLES: Record<Role, { name: string; title: string; initials: string; job?: string }> = {
+  business: { name: 'Dr Zawadi Nkosi', title: 'Business Owner', initials: 'ZN',
+    job: "Accountable for the country's participation and its use cases. Puts the team together and signs off." },
+  keymaster: { name: 'Kwame Mensah', title: 'Key Master', initials: 'KM',
+    job: "Creates and safeguards the country's keys and certificates (the PKI)." },
+  legal: { name: 'Sara Diallo', title: 'Legal', initials: 'SD',
+    job: "WHO's contact on legal and policy matters. Prepares the Letter of Application." },
+  technical: { name: 'Tendai Banda', title: 'Technical', initials: 'TB',
+    job: 'Runs the backend, its security and the connection tests with the Gateway.' },
   who: { name: 'WHO', title: 'WHO does this part', initials: 'WHO' },
 };
 
@@ -130,12 +134,8 @@ export const MOMENTS: Moment[] = [
     id: 'team', phase: 'A', title: 'Name your team', steps: 'Representatives', place: 'ministry', role: 'business', type: 'choice',
     brief: 'WHO needs named people it can verify. {business}, the Business Owner, puts the team together.',
     docs: [{
-      kind: 'note', title: '{country} representatives', lines: [
-        'Business Owner · {business} · owns the use cases',
-        'Key Master · {keymaster} · key generation and the PKI',
-        "Legal · {legal} · WHO's contact on legal and policy",
-        'Technical · {technical} · security, infrastructure, conformance',
-      ],
+      kind: 'note', title: '{country} representatives',
+      lines: (['business', 'keymaster', 'legal', 'technical'] as const).map(r => `${ROLES[r].title} · {${r}} · ${ROLES[r].job}`),
     }],
     prompt: 'How do you set the team up for onboarding?',
     choices: [

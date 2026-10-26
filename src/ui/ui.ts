@@ -123,9 +123,10 @@ export class UI {
         <div class="eyebrow">See it in action</div>
         <p class="side-lede">Short films showing what onboarding involves and what the network does once a country is live.</p>
         <button class="side-tile" id="side-demo">
-          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">4 min</span></span>
+          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">3 min</span></span>
           <span class="side-text"><span class="uc-tag">Narrated demo · this game</span><b>How onboarding works</b><span class="uc-sub">The ideal path from first email to go-live, in nine steps</span></span>
         </button>
+        <a class="side-dl" href="${import.meta.env.BASE_URL}video/join-the-network-demo-en.mp4" download>⬇ Download the narrated demo as MP4 (6 MB)</a>
         ${USE_CASES.map(u => `<button class="side-tile" data-uc="${u.id}">
           <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}${u.poster}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
           <span class="side-text"><span class="uc-tag">${u.tag}</span><b>${u.title}</b><span class="uc-sub">${u.subtitle}</span></span>

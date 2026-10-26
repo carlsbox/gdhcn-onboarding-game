@@ -250,7 +250,9 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 }
 
 /* ---------- title setup ---------- */
-.setup { display: grid; grid-template-columns: 1fr 96px; gap: 10px; margin: 16px 0 8px; }
+.setup { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 10px; margin: 16px 0 8px; align-items: end; }
+.setup label { white-space: nowrap; min-width: 0; }
+@media (max-width: 480px) { .setup { grid-template-columns: minmax(0, 1fr) 96px; } .setup label { white-space: normal; } }
 .setup label, .team label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
 .setup input, .team input {
   font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); text-transform: none; letter-spacing: 0;
@@ -540,3 +542,6 @@ kbd { font: 700 11.5px system-ui, sans-serif; padding: 1px 6px; border-radius: 6
 #tip-pop[hidden] { display: none; }
 #tip-pop b { display: block; margin-bottom: 3px; font-size: 15px; }
 .w-label.has-tip, .w-territory.has-tip { pointer-events: auto; }
+
+.side-dl { display: block; margin: -2px 0 10px 4px; font-size: 13px; font-weight: 600; color: var(--ink-soft); text-decoration: none; }
+.side-dl:hover, .side-dl:focus-visible { color: var(--ink); text-decoration: underline; }

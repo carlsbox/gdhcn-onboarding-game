@@ -1,11 +1,6 @@
 /**
- * Hand-written French for structural words that have no row in the reviewed transcripts
- * (list joiners, plural forms of code-built labels). Not reviewed by the facilitator: move a string
- * into a delta transcript and re-run scripts/import-fr.mjs when it has been.
+ * Hand-written French for structural words that have no row in the reviewed transcripts. Not reviewed by
+ * the facilitator: move a string into a delta transcript and re-run scripts/import-fr.mjs once it has been.
+ * Empty since the 26 October delta transcript (transcript-fr-delta-2026-10-26.md) covers every former entry.
  */
-export const frManual: Record<string, string> = {
-  'settings.ts:domains.and': ' et ',
-  'settings.ts:letter.one': '{n} lettre',
-  'settings.ts:letter.other': '{n} lettres',
-  'Demo.ts:bar.speed': 'Vitesse de lecture',
-};
+export const frManual: Record<string, string> = {};

@@ -42,7 +42,7 @@ async function loadCurrent() {
   writeFileSync(entry, `
     export { en } from ${src('src/i18n/en.ts')};
     export { MOMENTS, PHASES, ROLES } from ${src('src/game/scenario.ts')};
-    export { stripTips, GLOSSARY } from ${src('src/game/glossary.ts')};
+    export { stripTips, GLOSSARY, GLOSSARY_FR } from ${src('src/game/glossary.ts')};
     export { parsePath, getIn } from ${src('src/i18n/path.ts')};
   `);
   const out = join(tmp, 'bundle.mjs');
@@ -123,7 +123,7 @@ const plainKey = s => ws(QUOTES(s));
 
 const FR_ANCHORS = {
   github: ['GitHub'], upload: ['certificat de téléversement'], uat: ['UAT'], prod: ['PROD'], dev: ['DEV'],
-  top: ['conditions de participation (TOP)', 'conditions de participation', 'TOP0 à TOP4'],
+  top: ['TOP2 et TOP3', 'conditions de participation (TOP)', 'conditions de participation', 'TOP0 à TOP4'],
   tngbot: ["le robot de l'OMS", "robot de l'OMS", "bot de l'OMS", 'tng-bot'],
   tls: ['certificat client TLS', 'certificat TLS'],
   sca: ['autorité de certification de signature (SCA)', 'AC de signature (SCA)', 'SCA'],
@@ -134,9 +134,12 @@ const FR_ANCHORS = {
   anchor: ['ancre de confiance'],
 };
 
+/** Table cells are trimmed, so give the French the same leading and trailing spaces as the English (list joiners, indented terminal lines). */
+const edgeSpace = (en, fr) => (/^\s*/.exec(en)[0] + fr + (/\s*$/.exec(en)[0]));
+
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '[ \u00A0\u202F]');
 /** French equivalents of inline-tag text that is not a literal copy (keyboard key, parenthesised hint). */
-const TAG_ANCHORS = { Shift: ['Maj'], '(touch: two-finger drag)': ['(tactile : glisser à deux doigts)'] };
+const TAG_ANCHORS = { Shift: ['Maj'], '{country} is live': ['{country} est en service'], '(touch: two-finger drag)': ['(tactile : glisser à deux doigts)'] };
 
 /** Position of the first match of `needle` (case-insensitive) that is not inside existing markup, or -1. */
 function findFree(text, needle) {
@@ -201,7 +204,7 @@ function enumerateScenario({ MOMENTS, PHASES, ROLES, parsePath }) {
 // ---------- main ----------
 
 const cur = await loadCurrent();
-const { en, stripTips, GLOSSARY, parsePath } = cur;
+const { en, stripTips, GLOSSARY, GLOSSARY_FR, parsePath } = cur;
 const scenarioCurrent = enumerateScenario(cur);
 const canon = k => parsePath(k).join('.');
 
@@ -214,6 +217,7 @@ for (const f of Object.values(files)) if (!existsSync(f)) { console.error(`missi
 
 /** scope of a key: UI keys carry `file:`; PHASES/ROLES rows in the UI transcript alias the scenario keys. */
 function classify(key) {
+  if (key.startsWith('glossary.')) return { scope: 'glossary', key };
   const m = /^scenario\.ts:(PHASES|ROLES)\.(.+)$/.exec(key);
   if (m) return { scope: 'scenario', key: `${m[1].toLowerCase()}.${m[2]}`, alias: true };
   if (key.includes(':')) return { scope: 'ui', key };
@@ -221,7 +225,7 @@ function classify(key) {
 }
 
 // later sources override earlier ones; the scenario transcript outranks aliased rows in the UI transcript
-const table = { ui: new Map(), scenario: new Map() };
+const table = { ui: new Map(), scenario: new Map(), glossary: new Map() };
 const conflicts = [];
 function ingest(file, rows, tag) {
   for (const r of rows) for (const raw of r.keys) {
@@ -269,7 +273,7 @@ for (const [key, row] of table.ui) {
   const lost = [];
   fr = rewrap(currentEn, fr, GLOSSARY, lost);
   for (const l of lost) report.lostMarkup.push({ key, ...l });
-  outUi[key] = fr;
+  outUi[key] = edgeSpace(currentEn, fr);
 }
 for (const key of Object.keys(en)) if (!table.ui.has(key)) report.missing.push({ scope: 'ui', key, en: en[key] });
 
@@ -282,10 +286,21 @@ for (const [key, row] of table.scenario) {
     continue;
   }
   const lost = [];
-  outScenario[key] = rewrap(currentEn, row.fr, GLOSSARY, lost);
+  outScenario[key] = edgeSpace(currentEn, rewrap(currentEn, row.fr, GLOSSARY, lost));
   for (const l of lost) report.lostMarkup.push({ key, ...l });
 }
 for (const [key, e] of scenarioCurrent) if (!table.scenario.has(key)) report.missing.push({ scope: 'scenario', key, en: e });
+
+// ----- glossary tooltips: French stays in src/game/glossary.ts (code is the source); rows are checked, not imported -----
+report.glossary = { rows: table.glossary.size, stale: [], drift: [], missing: [] };
+for (const [key, row] of table.glossary) {
+  const [, k, f] = key.split('.');
+  const g = GLOSSARY[k], gf = GLOSSARY_FR[k];
+  if (!g || !(f === 'term' || f === 'def')) { report.glossary.stale.push({ key, note: 'no such glossary entry' }); continue; }
+  if (plainKey(row.en) !== plainKey(g[f])) { report.glossary.stale.push({ key, transcriptEn: row.en, currentEn: g[f] }); continue; }
+  if (!gf || plainKey(row.fr) !== plainKey(gf[f])) report.glossary.drift.push({ key, transcriptFr: row.fr, codeFr: gf?.[f] });
+}
+for (const [k, g] of Object.entries(GLOSSARY)) for (const f of ['term', 'def']) if (!table.glossary.has(`glossary.${k}.${f}`)) report.glossary.missing.push(`glossary.${k}.${f}`);
 
 report.importedUi = Object.keys(outUi).length;
 report.importedScenario = Object.keys(outScenario).length;
@@ -301,4 +316,5 @@ writeFileSync(join(ROOT, 'src/i18n/scenario.fr.ts'), `/**\n * French overlay for
 writeFileSync(REPORT, JSON.stringify(report, null, 2) + '\n');
 
 console.log(`imported ${report.imported} (ui ${report.importedUi}, scenario ${report.importedScenario}) | stale ${report.stale.length} | removed ${report.removed.length} | missing ${report.missing.length}`);
+console.log(`glossary rows ${report.glossary.rows} | stale ${report.glossary.stale.length} | drift from code ${report.glossary.drift.length} | missing ${report.glossary.missing.length}`);
 console.log(`conflicts ${conflicts.length} | tooltip/markup not placed ${report.lostMarkup.length} | report ${REPORT}`);

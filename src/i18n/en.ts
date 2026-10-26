@@ -73,6 +73,12 @@ export const en: Record<string, string> = {
   "ui.ts:strip.homeTitle": "Back to the title screen",
   "ui.ts:strip.restart": "↺ Restart",
   "ui.ts:strip.restartTitle": "Restart onboarding from the first step",
+  // short phase names for the progress strip only (same words as scenario.ts PHASES; French is shorter than its full phase names)
+  "ui.ts:strip.phase.A": "Apply",
+  "ui.ts:strip.phase.B": "Prepare keys",
+  "ui.ts:strip.phase.C": "WHO checks and setup",
+  "ui.ts:strip.phase.D": "Test and go live",
+  "ui.ts:strip.phase.E": "Stay live",
   "ui.ts:hud.chipSteps": "WHO {steps}",
   "ui.ts:hud.role": "{name} · {title}",
   "ui.ts:desk.whoName": "WHO",

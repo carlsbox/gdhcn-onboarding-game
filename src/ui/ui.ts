@@ -489,7 +489,7 @@ function routeSvg(index: number, detours: Detour[], final: boolean) {
     const idx = MOMENTS.map((m, i) => (m.phase === p ? i : -1)).filter(i => i >= 0);
     if (!idx.length) continue;
     const a = xs[idx[0]], b = xs[idx[idx.length - 1]];
-    labels.push(`<text x="${(a + b) / 2}" y="${y + 26}" class="s-label ${idx.includes(index) && !final ? 'on' : ''}">${p} · ${PHASES[p]}</text>`);
+    labels.push(`<text x="${(a + b) / 2}" y="${y + 26}" class="s-label ${idx.includes(index) && !final ? 'on' : ''}">${p} · ${U(`strip.phase.${p}`)}</text>`);
     segs.push(`<line x1="${a - 8}" y1="${y}" x2="${b + 8}" y2="${y}" class="s-phase p-${p}"/>`);
   }
   const done = final ? x1 : xs[Math.min(index, n - 1)];

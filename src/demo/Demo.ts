@@ -24,7 +24,7 @@ interface Beat {
 const BEATS: Beat[] = [
   {
     title: 'Ask to join', steps: 'Steps 1–8', place: 'home',
-    body: "The Country's Ministry of Health emails a Statement of Interest to the WHO GDHCN support team. WHO checks that the Country is eligible and accepts the Terms of Participation, then invites it to onboard and sends the technical specifications.",
+    body: "The Country's Ministry of Health emails a Statement of Interest to the GDHCN Secretariat. WHO checks that the Country is eligible and accepts the Terms of Participation, then invites it to onboard and sends the technical specifications.",
     run: async (w, dead) => {
       await w.travel([['paper', 1]], 'Statement of Interest', 'paper'); if (dead()) return;
       await w.travel([['paper', -1]], 'Invitation + technical specs', 'paper');
@@ -42,7 +42,7 @@ const BEATS: Beat[] = [
   },
   {
     title: 'Send the Letter of Application', steps: 'Steps 12–14', place: 'home',
-    body: "Within the seven-day window for those bot invitations, the Legal representative sends the Letter of Application. It lists the repositories, the GPG keys, the Country's ISO participant code, the certificates, and the named contacts.",
+    body: "Before production, the Legal representative sends a Letter of Application for each trust domain the Country joins. It names the four contacts, the GPG key fingerprints and the production repository. The certificates themselves stay in the repository for tng-bot to collect.",
     run: async w => { await w.travel([['paper', 1]], 'Letter of Application', 'paper'); },
   },
   {
@@ -77,8 +77,8 @@ const BEATS: Beat[] = [
     },
   },
   {
-    title: 'Test on UAT', steps: 'Steps 60–69', place: 'home',
-    body: "The Technical lead connects to the test gateway with the TLS client certificate, then runs the dry run: upload a Document Signer Certificate, revoke one, download the trust list, and validate samples. When it passes, WHO opens production.",
+    title: 'Test before going live', steps: 'Steps 60–69', place: 'home',
+    body: "The Technical lead connects to a test gateway with the TLS client certificate. Testing can run on DEV, UAT or PROD. The dry run uploads a Document Signer Certificate, revokes one, downloads the trust list and validates samples. When it passes, WHO opens production.",
     run: async (w, dead) => {
       await w.travel([['backend-uat', 1]], 'mTLS · GET /trustList', 'data'); if (dead()) return;
       await w.travel([['backend-uat', 1]], 'Upload · revoke · download', 'data'); if (dead()) return;

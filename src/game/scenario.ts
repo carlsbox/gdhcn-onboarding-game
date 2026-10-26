@@ -6,7 +6,7 @@ import type { Moment, Phase, Role } from './types';
  * Step numbers refer to that page. Game days are illustrative, not WHO timelines.
  *
  * Text uses {tokens} filled in at runtime from the player's settings (see settings.ts):
- * {country}, {code}, {codeLower}, {code3}, {code3Lower} (ISO 3-letter, for repo names), {domain}, {business}, {keymaster}, {legal}, {technical},
+ * {country}, {code}, {codeLower} (3-letter, same as {code3}), {code3}, {code3Lower} (ISO 3-letter, for repo names), {domain}, {business}, {keymaster}, {legal}, {technical},
  * {keymasterFirst}, {legalFirst}, {technicalFirst}, {keymasterEmail}, {keymasterPersonal}.
  * Defaults: Country XC, with fictional people Dr Zawadi Nkosi, Kwame Mensah, Sara Diallo, Tendai Banda.
  */
@@ -20,11 +20,15 @@ export const PHASES: Record<Phase, string> = {
 };
 
 /** Names and initials are overwritten from the player's settings at start-up. */
-export const ROLES: Record<Role, { name: string; title: string; initials: string }> = {
-  business: { name: 'Dr Zawadi Nkosi', title: 'Business Owner', initials: 'ZN' },
-  keymaster: { name: 'Kwame Mensah', title: 'Key Master', initials: 'KM' },
-  legal: { name: 'Sara Diallo', title: 'Legal', initials: 'SD' },
-  technical: { name: 'Tendai Banda', title: 'Technical', initials: 'TB' },
+export const ROLES: Record<Role, { name: string; title: string; initials: string; job?: string }> = {
+  business: { name: 'Dr Zawadi Nkosi', title: 'Business Owner', initials: 'ZN',
+    job: "Accountable for the country's participation and its use cases. Puts the team together and signs off." },
+  keymaster: { name: 'Kwame Mensah', title: 'Key Master', initials: 'KM',
+    job: "Creates and safeguards the country's keys and certificates (the PKI)." },
+  legal: { name: 'Sara Diallo', title: 'Legal', initials: 'SD',
+    job: "WHO's contact on legal and policy matters. Prepares the Letter of Application." },
+  technical: { name: 'Tendai Banda', title: 'Technical', initials: 'TB',
+    job: 'Runs the backend, its security and the connection tests with the Gateway.' },
   who: { name: 'WHO', title: 'WHO does this part', initials: 'WHO' },
 };
 
@@ -36,7 +40,7 @@ export const MOMENTS: Moment[] = [
     docs: [{ kind: 'letter', title: 'Statement of Interest', lines: ['From: Ministry of Health, {country}', 'To: WHO GDHCN Secretariat', '{country} wishes to join the Global Digital Health Certification Network as a Participant.'] }],
     prompt: 'How do you send it?',
     choices: [
-      { id: 'email', correct: true, text: 'Email it to gdhcn-support@who.int' },
+      { id: 'email', correct: true, text: 'Email it to gdhcn-secretariat@who.int' },
       {
         id: 'gateway', text: 'Upload it to the Trust Network Gateway',
         consequence: {
@@ -51,21 +55,21 @@ export const MOMENTS: Moment[] = [
         consequence: {
           title: 'Nobody is looking there', by: 'WHO Secretariat', steps: 'Step 1',
           what: "No one at WHO watches a repository it hasn't been told about. tng-bot only reads repositories it is invited to, much later in onboarding.",
-          why: 'The Statement of Interest goes to gdhcn-support@who.int.',
+          why: 'The Statement of Interest goes to gdhcn-secretariat@who.int.',
           days: 4, travel: { legs: [['backend-github', 1]], label: 'Statement of Interest', kind: 'paper' },
         },
       },
     ],
     success: { travel: [{ legs: [['paper', 1]], label: 'Statement of Interest', kind: 'paper' }], note: 'Received by the GDHCN Secretariat.' },
     days: 2,
-    learn: 'Onboarding starts with an email: the Statement of Interest goes to gdhcn-support@who.int.',
+    learn: 'Onboarding starts with an email: the Statement of Interest goes to gdhcn-secretariat@who.int.',
   },
   {
     id: 'eligibility', phase: 'A', title: 'Prove you are eligible', steps: 'Steps 2–8', place: 'ministry', role: 'legal', type: 'choice',
-    brief: 'WHO checks that the applicant is eligible and accepts the Terms of Participation. {legalFirst}, your Legal representative, prepares the response.',
+    brief: 'WHO checks that the applicant is eligible and accepts the [[top|Terms of Participation (TOP)]]. {legalFirst}, your Legal representative, prepares the response.',
     docs: [{
       kind: 'note', title: 'Terms of Participation', lines: [
-        'TOP0 · Share credentials for an mTLS connection to the Gateway',
+        '[[top|TOP0]] · Share credentials for an mTLS connection to the Gateway',
         'TOP1 · Follow the PKI technical specifications',
         'TOP2 · Follow the certificate and API specifications for each trust domain',
         'TOP3 · Meet the policy and regulatory standards for each trust domain',
@@ -102,19 +106,40 @@ export const MOMENTS: Moment[] = [
     learn: 'Eligibility and the Terms of Participation are checked before any keys exist.',
   },
   {
+    id: 'domains', phase: 'A', title: 'Choose your trust domains', steps: 'Trust domains', place: 'ministry', role: 'legal', type: 'checklist',
+    brief: "A country applies for each trust domain it wants to join. Each domain has its own Letter of Application and its own legal and policy requirements ([[top|TOP2 and TOP3]]). {legalFirst} confirms which ones {country} has the mandate for.",
+    prompt: 'Tick every trust domain {country} applies for.',
+    checklist: {
+      note: 'A country can also join the Gateway with a general Letter and no trust domain yet. This simulation follows a country that joins at least one.',
+      button: 'Confirm trust domains',
+      minDomains: 1,
+      items: [
+        { text: 'DDCC · COVID-19 vaccination and test certificates', required: false, domain: 'DDCC' },
+        { text: 'ICVP · Yellow fever vaccination (International Certificate of Vaccination or Prophylaxis) · in development', required: false, domain: 'ICVP' },
+        { text: 'PH4H · Pan-American Highway for Digital Health (the Americas)', required: false, domain: 'PH4H' },
+        { text: 'IPS Pilgrimage · International Patient Summary for pilgrims', required: false, domain: 'IPS Pilgrimage' },
+        { text: 'No need to choose: one application covers every trust domain', required: false, why: 'Each trust domain has its own Letter and its own legal and policy requirements. Apply for each one you join.' },
+      ],
+      consequence: {
+        title: 'Trust domain unclear', by: 'WHO Secretariat', steps: 'Trust domains',
+        what: "WHO couldn't tell which trust domains {country} is applying for.", why: '',
+        days: 3, travel: { legs: [['paper', 1]], label: 'Application', kind: 'paper' },
+      },
+    },
+    success: { note: 'Applying for: {domains}.' },
+    days: 3,
+    learn: 'Countries apply per trust domain, and each domain has its own Letter and legal requirements.',
+  },
+  {
     id: 'team', phase: 'A', title: 'Name your team', steps: 'Representatives', place: 'ministry', role: 'business', type: 'choice',
     brief: 'WHO needs named people it can verify. {business}, the Business Owner, puts the team together.',
     docs: [{
-      kind: 'note', title: '{country} representatives', lines: [
-        'Business Owner · {business} · owns the use cases',
-        'Key Master · {keymaster} · key generation and the PKI',
-        "Legal · {legal} · WHO's contact on legal and policy",
-        'Technical · {technical} · security, infrastructure, conformance',
-      ],
+      kind: 'note', title: '{country} representatives',
+      lines: (['business', 'keymaster', 'legal', 'technical'] as const).map(r => `${ROLES[r].title} · {${r}} · ${ROLES[r].job}`),
     }],
     prompt: 'How do you set the team up for onboarding?',
     choices: [
-      { id: 'four', correct: true, text: 'Name all four, each with an official {domain} email address' },
+      { id: 'four', correct: true, text: 'Name all four, each with an official government email address' },
       {
         id: 'later', text: 'Let the software vendor handle the keys and name the people later',
         consequence: {
@@ -133,17 +158,17 @@ export const MOMENTS: Moment[] = [
   // ---------------- B · Prepare keys ----------------
   {
     id: 'tools', phase: 'B', title: 'Set up the workbench', steps: 'Onboarding checklist', place: 'backend', role: 'technical', type: 'choice',
-    brief: '{technicalFirst} sets up the tools: OpenSSL, cURL, Git, GPG and a GitHub account.',
+    brief: "{technicalFirst} sets up the tools: OpenSSL, cURL, Git, [[gpg|GPG]] and a [[github|GitHub]] account. On Windows, WHO's <a href=\"https://github.com/WorldHealthOrganization/GDHCNOnboardingWizard\" target=\"_blank\" rel=\"noopener\">Onboarding Wizard</a> can do the repository, GPG and certificate steps for you.",
     docs: [{
-      kind: 'terminal', title: "{technicalFirst}'s Windows laptop", lines: [
-        '> openssl version', 'OpenSSL 3.0.13', '> git --version', 'git version 2.45.1',
-        '> gpg --version', 'gpg (GnuPG) 2.4.5', '> curl --version', 'curl 8.4.0 (Windows) Schannel',
+      kind: 'terminal', title: "{technicalFirst}'s laptop", lines: [
+        '$ openssl version', 'OpenSSL 3.0.13 30 Jan 2024', '$ git --version', 'git version 2.45.1',
+        '$ curl --version', 'curl 8.5.0 (x86_64-pc-linux-gnu) libcurl/8.5.0 OpenSSL/3.0.13', '$ gpg --version', 'bash: gpg: command not found',
       ], mark: [7],
     }],
-    prompt: 'Which cURL will you use for the Gateway tests later on?',
+    prompt: 'GPG is missing. Do you need every tool?',
     choices: [
-      { id: 'openssl', correct: true, text: 'Install a cURL build that uses OpenSSL' },
-      { id: 'schannel', flag: 'schannel', text: "Keep the cURL that ships with Windows; it's already installed" },
+      { id: 'all', correct: true, text: 'Install GPG too: every named person needs a GPG key, and the release tag must be signed' },
+      { id: 'nogpg', flag: 'nogpg', text: 'Skip GPG; Git and OpenSSL cover what we need' },
       {
         id: 'skip', text: 'Skip cURL; WHO tests the connection for us',
         consequence: {
@@ -156,31 +181,31 @@ export const MOMENTS: Moment[] = [
     ],
     success: { note: 'Workbench ready.' },
     days: 2,
-    learn: "Tools matter: Windows' built-in cURL (Schannel) can't present your certificate, so use an OpenSSL build.",
+    learn: "Set up every tool before you start: OpenSSL, cURL, Git and GPG. On Windows, WHO's Onboarding Wizard can help.",
   },
   {
     id: 'certs', phase: 'B', title: 'Create your certificates', steps: 'Step 9', place: 'backend', role: 'keymaster', type: 'choice',
-    brief: "{keymasterFirst} creates {country}'s certificates. Each environment needs a Signing CA (SCA), a TLS client certificate and an Upload certificate.",
+    brief: "{keymasterFirst} creates {country}'s certificates. Each environment needs its own [[sca|Signing CA (SCA)]], [[tls|TLS client certificate]] and [[upload|Upload certificate]]: [[dev]] (optional), [[uat]] and [[prod]].",
     docs: [
-      { kind: 'cert', title: 'SCA · Signing CA', lines: ["{country}'s trust anchor", 'Issues Document Signer Certificates (DSCs)'] },
+      { kind: 'cert', title: 'SCA · Signing CA', lines: ["{country}'s trust anchor", 'Issues [[dsc|Document Signer Certificates (DSCs)]]'] },
       { kind: 'cert', title: 'TLS client certificate', lines: ["Proves your backend's identity to the Gateway (mTLS)"] },
       { kind: 'cert', title: 'Upload certificate', lines: ['Signs the packages you upload to the Gateway'] },
     ],
     prompt: 'How many sets do you create?',
     choices: [
-      { id: 'two', correct: true, text: 'One set for UAT and a separate set for PROD' },
-      { id: 'one', flag: 'reuse', text: 'One set, used in both UAT and PROD; less to manage' },
+      { id: 'two', correct: true, text: 'A separate set for each environment: DEV (optional), UAT and PROD' },
+      { id: 'one', flag: 'reuse', text: 'One set, used in DEV, UAT and PROD; less to manage' },
       {
         id: 'tls', text: 'Only the TLS certificate for now; the rest can wait',
         consequence: {
           title: 'Key material incomplete', by: 'WHO Secretariat', steps: 'Steps 9, 14',
-          what: 'The Letter of Application needs your SCA, TLS and Upload certificates.',
+          what: "tng-bot collects your SCA, TLS and Upload certificates from your GitHub repository, and two of them aren't there.",
           why: 'All three are prepared for every environment you onboard to.',
           days: 3,
         },
       },
     ],
-    success: { note: 'Two separate sets: one for UAT, one for PROD.' },
+    success: { note: 'A separate set for each environment, never shared.' },
     days: 3,
     learn: 'Never reuse keys or certificates between production and test environments.',
   },
@@ -216,7 +241,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'gpg', phase: 'B', title: 'Create GPG keys', steps: 'Step 10', place: 'backend', role: 'keymaster', type: 'choice',
-    brief: 'Every person authorised to provide key material needs a GPG key for each environment. WHO will compare it with the Letter of Application.',
+    brief: 'Every person authorised to provide key material needs a [[gpg|GPG key]] for each environment. WHO will compare it with the Letter of Application.',
     docs: [{ kind: 'key', title: 'New GPG key · {keymaster}', lines: ['Algorithm: RSA 4096', 'Email: ?'], mark: [1] }],
     prompt: "Which email goes in {keymasterFirst}'s GPG key?",
     choices: [
@@ -232,13 +257,23 @@ export const MOMENTS: Moment[] = [
         },
       },
     ],
+    checks: [{
+      flag: 'nogpg',
+      consequence: {
+        title: "GPG isn't installed", by: 'Your own workbench', steps: 'Step 10',
+        what: "{keymasterFirst} can't create a GPG key: GPG was never installed on the workbench.",
+        why: 'Every named person signs with a GPG key, and tng-bot only accepts a GPG-signed tag.',
+        days: 2,
+      },
+      fix: '{technicalFirst} installs GPG, then {keymasterFirst} creates the key.',
+    }],
     success: { note: 'GPG keys created for each authorised person, per environment.' },
     days: 1,
     learn: 'The email inside each GPG key must match the email in the Letter of Application.',
   },
   {
     id: 'repos', phase: 'B', title: 'Set up the private repos', steps: 'Step 11', place: 'github', role: 'technical', type: 'choice',
-    brief: "{technicalFirst} creates the private GitHub repositories that WHO's bot will read.",
+    brief: "{technicalFirst} creates the [[repo|private GitHub repositories]] that [[tngbot|WHO's bot]] will read.",
     docs: [{ kind: 'note', title: 'Repository setup', lines: ['tng-{code3Lower}-uat · public keys (PEM)', 'tng-{code3Lower}-prod · public keys (PEM)', 'Invite: ?'], mark: [2] }],
     prompt: 'How do you set them up?',
     choices: [
@@ -293,41 +328,50 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'invite', phase: 'B', title: 'Beat the 7-day clock', steps: 'Steps 12–13', place: 'ministry', role: 'business', type: 'choice',
-    brief: 'The bot invitations expire after 7 days. WHO has to accept them in that window, and the Letter of Application still needs signatures.',
+    brief: "The bot invitations expire after 7 days. WHO has to accept them in that window, and it only knows to look if you tell it. The Letter of Application is a separate step and can follow later.",
     docs: [{ kind: 'email', title: 'GitHub · invitations sent', lines: ['tng-bot-dev invited to tng-{code3Lower}-uat', 'tng-bot invited to tng-{code3Lower}-prod', 'Expires in 7 days'], mark: [2] }],
     prompt: 'What do you do?',
     choices: [
-      { id: 'now', correct: true, text: 'Get the Letter signed and to WHO this week' },
+      { id: 'now', correct: true, text: 'Email gdhcn-support@who.int that the bot invitations are waiting, so WHO accepts them this week' },
       {
-        id: 'wait', text: "Hold the Letter for next month's management meeting",
+        id: 'wait', text: "Hold everything until the Letter is signed at next month's management meeting",
         consequence: {
           title: 'Invitations expired', by: 'GitHub', steps: 'Steps 12–13',
-          what: 'The invitations lapsed before WHO could accept them.',
-          why: 'Re-invite tng-bot and tng-bot-dev, restart the 7-day clock, and keep it in step with the Letter.',
+          what: 'The invitations lapsed before WHO accepted them.',
+          why: "The bot invitations don't wait for the Letter. Re-invite tng-bot and tng-bot-dev, then tell WHO straight away.",
+          days: 5,
+        },
+      },
+      {
+        id: 'silent', text: 'Do nothing; WHO watches GitHub and will see them',
+        consequence: {
+          title: 'Invitations expired', by: 'GitHub', steps: 'Steps 12–13',
+          what: 'Nobody at WHO knew the invitations were there, and they lapsed.',
+          why: 'Tell WHO by email when the invitations are ready. Re-invite tng-bot and tng-bot-dev and restart the 7-day clock.',
           days: 5,
         },
       },
     ],
-    success: { note: 'Letter signed in time.' },
+    success: { note: 'WHO told; bot invitations accepted in time.' },
     days: 2,
-    learn: 'Bot invitations expire after 7 days, so time them with the Letter of Application.',
+    learn: "Bot invitations expire after 7 days, so tell WHO they're ready. The Letter of Application can follow later.",
   },
   {
     id: 'letter', phase: 'B', title: 'Assemble the Letter of Application', steps: 'Step 14', place: 'ministry', role: 'legal', type: 'checklist',
-    brief: '{legalFirst} assembles the Letter of Application. WHO verifies everything else against it.',
+    brief: "{legalFirst} prepares a Letter of Application for each trust domain: {domains}. Keep it to the basics. The Letter names the people and points to the PROD repository; certificates and public keys live in GitHub.",
     prompt: 'Tick everything that belongs in the Letter, then send it.',
     checklist: {
       items: [
-        { text: 'Private repository URLs for UAT and PROD (DEV optional)', required: true },
+        { text: 'The PROD private repository name', required: true },
+        { text: 'GPG public key fingerprints of the named people', required: true },
+        { text: 'The four named contacts (Business Owner, Key Master, Legal, Technical) with official email addresses', required: true },
+        { text: 'Private repository URLs for UAT and DEV', required: false, why: 'Testing needs no Letter. Only the PROD repository goes in.' },
+        { text: 'SCA, TLS and Upload certificates', required: false, why: 'Certificates live in your GitHub repository, where tng-bot collects them.' },
+        { text: "{country}'s ISO participant code", required: false, why: 'WHO handles the participant code.' },
         { text: 'The SCA private key', required: false, why: 'Private keys never leave {country}.' },
-        { text: 'GPG public keys, per person and per environment', required: true },
-        { text: "{country}'s ISO participant code", required: true },
         { text: 'The GitHub access token, so WHO can log in', required: false, why: 'WHO never needs your GitHub login. The bot is invited instead.' },
-        { text: 'Contact details (with email) of the people authorised to provide certificates', required: true },
-        { text: 'SCA, TLS and Upload certificates', required: true },
         { text: 'Scanned passports of the team', required: false, why: 'Identity is checked face to face or through the diplomatic channel (steps 16–17).' },
-        { text: "A statement accepting other participants' keys in the gateway lists", required: true },
-        { text: 'Named Technical, Legal and Business Owner contacts', required: true },
+        { text: "A statement accepting other participants' keys in the gateway lists", required: false, why: 'Not part of the WHO Letter templates.' },
       ],
       consequence: {
         title: 'Letter returned', by: 'WHO Secretariat', steps: 'Steps 18–20',
@@ -335,9 +379,9 @@ export const MOMENTS: Moment[] = [
         days: 4, travel: { legs: [['paper', 1]], label: 'Letter of Application', kind: 'paper' },
       },
     },
-    success: { travel: [{ legs: [['paper', 1]], label: 'Letter of Application', kind: 'paper' }], note: 'Letter of Application received by WHO.' },
+    success: { travel: [{ legs: [['paper', 1]], label: 'Letter of Application', kind: 'paper' }], note: '{domainLetters} of Application received by WHO.' },
     days: 3,
-    learn: 'The Letter of Application ties people, GPG keys, repositories and certificates together.',
+    learn: 'The Letter names the people, their GPG keys and the PROD repository. Certificates stay in GitHub.',
   },
 
   // ---------------- C · WHO checks and setup ----------------
@@ -348,7 +392,7 @@ export const MOMENTS: Moment[] = [
     choices: [
       { id: 'f2f', correct: true, text: 'Meet WHO face to face with passports, or confirm through the diplomatic channel' },
       {
-        id: 'scan', text: 'Email scanned passports to gdhcn-support',
+        id: 'scan', text: 'Email scanned passports to the GDHCN Secretariat',
         consequence: {
           title: 'Not an accepted channel', by: 'WHO Secretariat', steps: 'Steps 16–17',
           what: "WHO can't verify identity from an emailed scan.",
@@ -395,7 +439,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'airgap', phase: 'C', title: 'WHO signs PROD offline', steps: 'Steps 36–50', place: 'ops', role: 'who', type: 'choice',
-    brief: "PROD is different. WHO verifies the pull request, then signs your PROD keys with its Trust Anchor in an air-gapped process. The Trust Anchor's private key is never on the online gateway.",
+    brief: "PROD is different. WHO verifies the pull request, then signs your PROD keys with its [[anchor|Trust Anchor]] in an air-gapped process. The Trust Anchor's private key is never on the [[gateway|online gateway]].",
     prompt: 'Your team asks how to speed this up. What do you say?',
     choices: [
       { id: 'wait', correct: true, text: "Wait for WHO's air-gapped signing and get ready for testing" },
@@ -430,8 +474,8 @@ export const MOMENTS: Moment[] = [
   // ---------------- D · Test and go live ----------------
   {
     id: 'connect', phase: 'D', title: 'Connect to UAT', steps: 'Steps 60–61', place: 'backend', role: 'technical', type: 'choice',
-    brief: "{technicalFirst} connects {country}'s backend to the UAT gateway for the first time.",
-    docs: [{ kind: 'terminal', title: 'Connectivity test', lines: ['> curl -v https://tng-uat.who.int/trustList \\', '    --cert ????.pem --key ????_key.pem'], mark: [1] }],
+    brief: "{technicalFirst} connects {country}'s backend to the [[uat|UAT]] gateway for the first time. Testing can run on [[dev|DEV]], UAT or [[prod|PROD]]; this example uses UAT.",
+    docs: [{ kind: 'terminal', title: 'Connectivity test', lines: ['$ curl -v https://tng-uat.who.int/trustList \\', '    --cert ????.pem --key ????_key.pem'], mark: [1] }],
     prompt: "Which certificate proves your backend's identity to the Gateway?",
     choices: [
       { id: 'tls', correct: true, text: 'The TLS client certificate and its key' },
@@ -454,16 +498,6 @@ export const MOMENTS: Moment[] = [
         },
       },
     ],
-    checks: [{
-      flag: 'schannel',
-      consequence: {
-        title: 'Connection fails', by: 'UAT gateway', steps: 'Step 61',
-        what: "Windows' built-in cURL (Schannel) couldn't present the PEM certificate and key.",
-        why: 'Use a cURL build linked to OpenSSL.',
-        days: 2, travel: { legs: [['backend-uat', 1]], label: 'GET /trustList', kind: 'data' },
-      },
-      fix: '{technicalFirst} installs an OpenSSL build of cURL and runs the test again.',
-    }],
     success: {
       travel: [
         { legs: [['backend-uat', 1]], label: 'GET /trustList (mTLS)', kind: 'data' },

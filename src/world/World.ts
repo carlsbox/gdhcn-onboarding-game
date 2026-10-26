@@ -12,6 +12,13 @@ import {
 } from './models';
 import { Bot } from './Bot';
 
+/** A 3D label that shows the GitHub glossary tooltip (the label layer itself ignores the pointer). */
+function tipLabel(el: HTMLElement) {
+  el.dataset.tip = 'github';
+  el.tabIndex = 0;
+  el.classList.add('has-tip');
+}
+
 export type PlaceId = 'ministry' | 'backend' | 'uat' | 'prod' | 'secretariat' | 'ops' | 'github' | 'dashboard';
 export type RouteId =
   | 'paper' | 'ministry-backend' | 'secretariat-ops'
@@ -147,7 +154,8 @@ export class World {
     this.places[id] = { pos: new THREE.Vector3(x, 0, z), name, blurb, group };
     const gw = id === 'uat' || id === 'prod';
     // gateway labels sit beside the gateway; building labels float above the roofline
-    this.label(this.scene, name, x + (gw ? 2.6 : 0), gw ? 1.4 : 3.6, z);
+    const el = this.label(this.scene, name, x + (gw ? 2.6 : 0), gw ? 1.4 : 3.6, z);
+    if (id === 'github') tipLabel(el);
   }
 
   private buildWorld() {
@@ -163,7 +171,7 @@ export class World {
     this.countryLabel = this.label(s, 'COUNTRY XC', -10, 0, -9.6, 'w-territory t-country');
     this.label(s, 'TRUST NETWORK GATEWAY', 0, 0, -8.4, 'w-territory t-network');
     this.label(s, 'WHO', 10, 0, -9.6, 'w-territory t-who');
-    this.label(s, 'GITHUB · third party', 0, 0.4, 13.7, 'w-territory t-github');
+    tipLabel(this.label(s, 'GITHUB · third party', 0, 0.4, 13.7, 'w-territory t-github'));
     // WHO-run certificate expiry dashboard (Grafana, one per environment), on its own island south of WHO
     const dash = new THREE.Group(); dash.position.set(10, 0, 11); s.add(dash);
     add(dash, new RoundedBoxGeometry(5.6, 0.9, 4.4, 6, 0.42), std(C.base), 0, -0.35, 0);
@@ -176,7 +184,7 @@ export class World {
     this.ministrySignMesh = min.userData.sign as THREE.Mesh;
     this.place('ministry', 'Ministry of Health', 'People and paperwork: Business Owner, Legal, Technical and Key Master representatives.', -10, -3.6, min, s);
     this.place('backend', 'Country backend', 'Your servers. Private TLS and Upload keys, Document Signers, and the offline SCA vault.', -10, 3.6, backend(), s);
-    this.place('secretariat', 'GDHCN Secretariat', 'gdhcn-support@who.int. Eligibility, Letters of Application and identity checks.', 10, -3.6, secretariat(), s);
+    this.place('secretariat', 'GDHCN Secretariat', 'Governance: gdhcn-secretariat@who.int. Technical help: gdhcn-support@who.int. Eligibility, Letters of Application and identity checks.', 10, -3.6, secretariat(), s);
     const ops = operations();
     this.anchor = ops.anchor;
     this.place('ops', 'WHO Operations', 'tng-bot, pull requests, and the air-gapped room where the WHO Trust Anchor signs PROD keys.', 10, 3.6, ops.group, s);
@@ -263,7 +271,7 @@ export class World {
   /** Fly back to wherever the game or demo last put the camera. */
   resetView() { return this.flyTo(this.lastView.where, { ...this.lastView.opts, dur: 1 }); }
 
-  flyTo(where: PlaceId | 'home', opts: { desk?: boolean; caption?: boolean; dur?: number } = {}): Promise<void> {
+  flyTo(where: PlaceId | 'home', opts: { desk?: boolean; caption?: boolean; dur?: number; zoomOut?: number } = {}): Promise<void> {
     this.lastView = { where, opts: { desk: opts.desk, caption: opts.caption } };
     let p1: THREE.Vector3, t1: THREE.Vector3;
     // a caption in the bottom-left: aim below-left of the subject so it sits up and to the right
@@ -274,7 +282,7 @@ export class World {
       const shift = opts.desk && !narrow ? 3.2 : 0;
       t1 = this.places[where].pos.clone().add(new THREE.Vector3(shift, 1.0, opts.desk && narrow ? 2.2 : 0)).add(cap);
       const k = Math.min(2.4, Math.max(1, 1.3 / this.camera.aspect)); // portrait screens need more distance
-      p1 = t1.clone().add(new THREE.Vector3(0, 11.5, 14.5).multiplyScalar(k));
+      p1 = t1.clone().add(new THREE.Vector3(0, 11.5, 14.5).multiplyScalar(k * (opts.zoomOut ?? 1)));
     }
     this.fly?.done(); // a newer flight replaces an older one
     return new Promise(done => {
@@ -400,7 +408,7 @@ export class World {
       ['who', false, 10.4, 0.32, -5.75, Math.PI * 0.9],  // behind the Secretariat dome
     ];
     for (const [id, sleeping, x, y, z, ry] of spots) {
-      const c = cat(sleeping);
+      const c = cat(sleeping, { bandit: id === 'country' });
       c.position.set(x, y, z); c.rotation.y = ry;
       this.scene.add(c);
       this.cats.set(c, id);

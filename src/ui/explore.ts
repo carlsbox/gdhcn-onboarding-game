@@ -1,12 +1,13 @@
 import type { PlaceId, World } from '../world/World';
 import { MOMENTS } from '../game/scenario';
 import { fill } from '../game/settings';
+import { renderTips } from '../game/glossary';
 
 /** What lives at each place: keys, documents, people. Shown on the explore info card. */
 const HOLDS: Record<PlaceId, string> = {
   ministry: 'The four named representatives, the Statement of Interest and the Letter of Application.',
   backend: 'Private keys: TLS, Upload and Document Signer keys. The SCA private key, offline in the vault.',
-  github: 'Public keys (PEM) and the GPG-signed tag, in a private repository per environment.',
+  github: 'Public keys (PEM) and the GPG-signed tag, in a private repository per environment on [[github|GitHub]].',
   uat: 'Test copies of your public keys, auto-signed and whitelisted, plus the test trust list.',
   prod: 'Your whitelisted production public keys and the trust lists other countries download.',
   secretariat: 'Your application, the Letter of Application and the verified identities of your team.',
@@ -55,7 +56,7 @@ export function explore(world: World, root: HTMLElement): Promise<'start' | 'bac
     card.innerHTML = `<button class="ex-x" aria-label="Close">✕</button>
       <div class="eyebrow">${p.name}</div>
       <p>${fill(p.blurb)}</p>
-      <h4>What lives here</h4><p>${HOLDS[id]}</p>
+      <h4>What lives here</h4><p>${renderTips(HOLDS[id])}</p>
       ${here.length ? `<h4>In the game, this is where you</h4><ul>${here.map(m => `<li>${m.title} <span class="chip steps">WHO ${m.steps}</span></li>`).join('')}</ul>` : ''}`;
     card.hidden = false;
     el.querySelectorAll('.ex-chip').forEach(c => c.classList.toggle('on', (c as HTMLElement).dataset.p === id));

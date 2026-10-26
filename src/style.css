@@ -166,6 +166,13 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 
 .checks { display: flex; flex-direction: column; gap: 6px; }
 .check { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 12px; background: #fff; border: 1px solid #e3e5f3; cursor: pointer; font-size: 14px; line-height: 1.35; }
+.check.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, #fff); }
+.check.warn { border-color: var(--country); box-shadow: 0 0 0 1px var(--country); }
+.check-why { display: block; margin-top: 3px; font-size: 12.5px; color: var(--bad); }
+.check:not(.bad) .check-why { display: none; }
+.check-note { font-size: 12.5px; color: var(--ink-soft); margin: 8px 2px 0; }
+.check-sum { margin: 10px 2px 0; font-size: 13px; font-weight: 700; color: var(--bad); }
+.check-sum:not([hidden]) { display: block; }
 .check input { margin-top: 2px; width: 17px; height: 17px; accent-color: var(--ink); flex: none; }
 
 #desk.returned { background: rgba(255, 246, 246, .9); }
@@ -250,6 +257,8 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
   padding: 10px 12px; border-radius: 12px; border: 1px solid #d6daf0; background: #fff; outline: none;
 }
 .setup input:focus, .team input:focus { border-color: #8fa6ec; box-shadow: 0 0 0 3px rgba(111, 156, 240, .2); }
+.code-hint { font-size: 12px; color: var(--ink-soft); margin: 0 0 6px; }
+.team .job { font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.4; color: var(--ink-soft); }
 .f-code input { text-transform: uppercase; text-align: center; }
 .adv { margin: 4px 0 6px; font-size: 14px; }
 .adv summary { cursor: pointer; font-weight: 650; color: var(--ink-soft); padding: 4px 0; }
@@ -513,3 +522,16 @@ kbd { font: 700 11.5px system-ui, sans-serif; padding: 1px 6px; border-radius: 6
   .title-wrap { flex-direction: column; align-items: center; }
   .title-wrap .title-card, .title-side { flex: none; width: 100%; max-width: 640px; }
 }
+
+/* ---------- glossary tooltips ---------- */
+.tip, [data-tip] { cursor: help; }
+.tip { text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; text-decoration-color: var(--ink-soft); border-radius: 3px; }
+.tip:hover, .tip:focus-visible { text-decoration-color: var(--who); outline: none; background: rgba(79, 128, 224, .1); }
+#tip-pop {
+  position: fixed; z-index: 200; max-width: min(320px, calc(100vw - 20px)); pointer-events: none;
+  padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.45; color: var(--ink);
+  background: var(--glass-strong); backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+#tip-pop[hidden] { display: none; }
+#tip-pop b { display: block; margin-bottom: 3px; font-size: 15px; }
+.w-label.has-tip, .w-territory.has-tip { pointer-events: auto; }

@@ -43,6 +43,7 @@ export interface ChecklistItem {
   text: string;
   required: boolean;
   why?: string; // shown when a wrong item is included
+  domain?: string; // a trust-domain choice: its short code. Never wrong, never missing; see minDomains
 }
 
 export interface DelayedCheck {
@@ -63,7 +64,13 @@ export interface Moment {
   prompt: string;
   type: 'choice' | 'checklist' | 'watch';
   choices?: Choice[];
-  checklist?: { items: ChecklistItem[]; consequence: Consequence };
+  checklist?: {
+    items: ChecklistItem[];
+    consequence: Consequence;
+    note?: string;       // small print under the list
+    button?: string;     // label of the submit button
+    minDomains?: number; // at least this many domain items must be ticked; the ticked ones become the run's domains
+  };
   /** Checks run after this moment succeeds, for flags set earlier. */
   checks?: DelayedCheck[];
   success: {

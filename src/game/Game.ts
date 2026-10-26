@@ -1,10 +1,11 @@
 import { MOMENTS } from './scenario';
-import { settings } from './settings';
+import { fill, getDomains, liveMoment, resetDomains, setDomains, settings } from './settings';
+import { stripTips } from './glossary';
 import { setFeedbackContext } from '../ui/feedback';
 import { PHASES } from './scenario';
 import type { Consequence, Moment, Travel } from './types';
 import type { World } from '../world/World';
-import { splash, type Detour, type UI } from '../ui/ui';
+import { splash, type ChecklistMarks, type Detour, type UI } from '../ui/ui';
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -18,6 +19,7 @@ export class Game {
   constructor(private world: World, private ui: UI) {}
 
   async run(start = 0) {
+    resetDomains();
     this.ui.showChrome();
     this.idealStateBefore(start);
     for (this.index = start; this.index < MOMENTS.length; this.index++) {
@@ -28,6 +30,7 @@ export class Game {
 
   /** Dev / facilitator jump to the end: debrief on the ideal path, then the splash. */
   async end() {
+    resetDomains();
     this.ui.showChrome();
     this.idealStateBefore(MOMENTS.length);
     this.index = MOMENTS.length;
@@ -50,7 +53,7 @@ export class Game {
     setFeedbackContext({ mode: 'debrief', where: 'Debrief', days: this.days, detours: this.detours.length });
     await this.ui.debrief({ days: this.days, ideal, detours: this.detours });
     setFeedbackContext({ mode: 'debrief', where: 'Completion splash', days: this.days, detours: this.detours.length });
-    const next = await splash(document.getElementById('app')!, this.detours.length);
+    const next = await splash(document.getElementById('app')!, this.detours.length, getDomains());
     location.hash = next === 'demo' ? 'demo' : '';
     location.reload();
   }
@@ -66,21 +69,35 @@ export class Game {
   }
 
   private async play(m: Moment) {
+    m = liveMoment(m); // the brief and prompt may name the trust domains chosen earlier
     this.refresh(m);
     this.world.mark(m.place);
     await this.world.flyTo(m.place, { desk: true });
 
     const tried = new Set<string>();
+    let marks: ChecklistMarks | undefined; // a retry keeps the ticks and flags what was wrong
     for (;;) {
       if (m.type === 'watch') { await this.ui.watch(m); break; }
 
       if (m.type === 'checklist') {
-        const picked = new Set(await this.ui.checklist(m));
-        const items = m.checklist!.items;
-        const missing = items.filter((it, i) => it.required && !picked.has(i)).map(it => `Missing: ${it.text}`);
-        const wrong = items.filter((it, i) => !it.required && picked.has(i)).map(it => `Should not be there: ${it.text}. ${it.why ?? ''}`);
-        if (!missing.length && !wrong.length) break;
-        await this.setBack(m, m.checklist!.consequence, { extra: [...wrong, ...missing] });
+        const cl = m.checklist!;
+        const picked = new Set(await this.ui.checklist(m, marks));
+        const items = cl.items;
+        const missingIdx = items.flatMap((it, i) => it.required && !picked.has(i) ? [i] : []);
+        const wrongIdx = items.flatMap((it, i) => !it.required && !it.domain && picked.has(i) ? [i] : []);
+        const chosen = items.flatMap((it, i) => it.domain && picked.has(i) ? [it.domain] : []);
+        const noDomains = chosen.length < (cl.minDomains ?? 0);
+        if (!missingIdx.length && !wrongIdx.length && !noDomains) {
+          if (cl.minDomains) setDomains(chosen);
+          break;
+        }
+        const extra = [
+          ...wrongIdx.map(i => `Should not be there: ${items[i].text}. ${items[i].why ?? ''}`),
+          ...missingIdx.map(i => `Missing: ${items[i].text}`),
+          ...(noDomains ? ['Pick at least one trust domain.'] : []),
+        ];
+        marks = { picked: [...picked], wrong: wrongIdx, missing: missingIdx, noDomains };
+        await this.setBack(m, cl.consequence, { extra });
         continue;
       }
 
@@ -149,13 +166,13 @@ export class Game {
       this.world.bot.setMood('idle');
       return;
     }
-    this.ui.toast(s.note, 'ok');
+    this.ui.toast(stripTips(fill(s.note)), 'ok');
     await wait(900);
   }
 
   private async botCollect(m: Moment) {
     const bot = this.world.bot;
-    await this.world.flyTo('github', { dur: 1.2 });
+    await this.world.flyTo('github', { dur: 1.2, zoomOut: 1.15 });
     await this.world.botTo('github');
     bot.setMood('checking');
     await wait(2200);
@@ -165,7 +182,7 @@ export class Game {
       await wait(900);
       await this.setBack(m, chk.consequence, { fix: chk.fix, origin: this.flaggedAt.get('webtag') });
       this.flags.delete('webtag');
-      await this.world.flyTo('github', { dur: 1 });
+      await this.world.flyTo('github', { dur: 1, zoomOut: 1.15 });
       bot.setMood('checking');
       await wait(1800);
     }

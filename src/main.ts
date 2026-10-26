@@ -10,12 +10,14 @@ import { devOn } from './ui/dev';
 import { UseCasesPage } from './usecases/page';
 import { WORLD_CATS, findCat, mrrp } from './ui/cat';
 import { explore } from './ui/explore';
+import { mountTooltips } from './ui/tooltip';
 
 const app = document.getElementById('app')!;
 const world = new World(app);
 const ui = new UI(app);
 const game = new Game(world, ui);
 mountFeedback(app);
+mountTooltips();
 const useCases = new UseCasesPage(app);
 addEventListener('open-usecases', () => useCases.open());
 addEventListener('open-usecase', e => useCases.open((e as CustomEvent<string>).detail));

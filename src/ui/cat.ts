@@ -82,7 +82,7 @@ export function mrrp() {
 
 const FOUND_KEY = 'gdhcn-cats-found';
 export const WORLD_CATS: Record<string, string> = {
-  country: "The Key Master's cat. Has never seen the SCA private key, which is correct.",
+  country: "The Key Master's cat, in disguise. Only steals fish, never private keys.",
   gateway: 'Asleep on the warm Gateway. Trust lists are very cosy.',
   who: "The Secretariat's cat. Has read the Administrative and Operational Framework twice.",
 };

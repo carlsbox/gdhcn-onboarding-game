@@ -4,6 +4,7 @@ import { DEFAULTS, deriveCode, settings, type Person, type Settings } from '../g
 import { devOn, devUnlocked, jumpTo, setDevOn } from './dev';
 import { catLine, catMood, catShows, catsFound, catSvg, mrrp } from './cat';
 import { USE_CASES } from '../usecases/data';
+import { renderTips as T, stripTips } from '../game/glossary';
 
 const h = (html: string) => {
   const t = document.createElement('template');
@@ -12,6 +13,9 @@ const h = (html: string) => {
 };
 
 export interface Detour { index: number; title: string; steps: string; why: string; days: number; origin?: string }
+/** What a failed checklist submit tells the retry: the ticks to keep and the items to flag. */
+export interface ChecklistMarks { picked: number[]; wrong: number[]; missing: number[]; noDomains: boolean }
+
 export interface DebriefData { days: number; ideal: number; detours: Detour[] }
 
 const PHASE_ORDER: Phase[] = ['A', 'B', 'C', 'D', 'E'];
@@ -95,14 +99,13 @@ export class UI {
         <p class="lede">Take your country from a first email to live on the production Trust Network Gateway, the way the WHO SMART Trust guidance sets it out.</p>
         <div class="setup">
           <label class="f-country">Your country<input id="s-country" maxlength="32" autocomplete="off"></label>
-          <label class="f-code">Code<input id="s-code" maxlength="3" autocomplete="off"></label>
+          <label class="f-code">3-letter code<input id="s-code" maxlength="3" autocomplete="off"></label>
         </div>
-        <details class="adv"><summary>Advanced: name your team</summary>
+        <p class="code-hint">ISO 3166 alpha-3 where one exists. Used in your repository names.</p>
+        <details class="adv"><summary>Your team: who does what</summary>
           <div class="team">
-            <label><span class="avatar r-business">BO</span>Business Owner<input data-p="business"></label>
-            <label><span class="avatar r-keymaster">KM</span>Key Master<input data-p="keymaster"></label>
-            <label><span class="avatar r-legal">LG</span>Legal<input data-p="legal"></label>
-            <label><span class="avatar r-technical">TC</span>Technical<input data-p="technical"></label>
+            ${([['business', 'BO'], ['keymaster', 'KM'], ['legal', 'LG'], ['technical', 'TC']] as const).map(([r, ini]) =>
+              `<label><span class="avatar r-${r}">${ini}</span>${ROLES[r].title}<input data-p="${r}"><span class="job">${ROLES[r].job}</span></label>`).join('')}
           </div>
           <button class="link reset" type="button">Reset to the sample country (Country XC)</button>
         </details>
@@ -132,7 +135,7 @@ export class UI {
     const $ = <T extends HTMLElement>(q: string) => el.querySelector(q) as T;
     const country = $<HTMLInputElement>('#s-country'), code = $<HTMLInputElement>('#s-code');
     const people = [...el.querySelectorAll<HTMLInputElement>('.team input')];
-    let codeTouched = initial.code !== deriveCode(initial.country);
+    let codeTouched = initial.code !== deriveCode(initial.country) && !(initial.country === DEFAULTS.country && initial.code === DEFAULTS.code);
     const fillForm = (s: Settings) => {
       country.value = s.country; code.value = s.code;
       people.forEach(i => { i.value = s.names[i.dataset.p as Person]; });
@@ -144,15 +147,17 @@ export class UI {
       $('.t-cname').textContent = country.value || 'Your country';
     });
     code.addEventListener('input', () => {
-      codeTouched = true;
       code.value = code.value.toUpperCase().replace(/[^A-Z]/g, '');
+      codeTouched = code.value !== ''; // clearing the field hands it back to the country name
     });
     $('.reset').addEventListener('click', () => { codeTouched = false; fillForm(structuredClone(DEFAULTS)); });
     const read = (): Settings => {
       const names = { ...DEFAULTS.names };
       people.forEach(i => { if (i.value.trim()) names[i.dataset.p as Person] = i.value.trim(); });
       const c = country.value.trim() || DEFAULTS.country;
-      return { country: c, code: (code.value.trim() || deriveCode(c)).toUpperCase(), names };
+      const typed = code.value.trim().toUpperCase();
+      const derived = country.value.trim() ? deriveCode(c) : DEFAULTS.code;
+      return { country: c, code: typed.length === 3 ? typed : derived, names };
     };
     return new Promise(done => {
       const go = (mode: 'play' | 'demo' | 'explore') => {
@@ -242,15 +247,15 @@ export class UI {
     return `<div class="desk-head"><span class="avatar r-${m.role}">${r.initials}</span>
       <div><div class="desk-who">${m.role === 'who' ? 'WHO' : r.name}</div><div class="desk-sub">${m.role === 'who' ? 'Watch what WHO does' : r.title}</div></div>
       <span class="chip steps">WHO ${m.steps}</span></div>
-      <h2>${m.title}</h2><p class="brief">${m.brief}</p>
+      <h2>${m.title}</h2><p class="brief">${T(m.brief)}</p>
       ${m.docs ? `<div class="docs">${m.docs.map(docHtml).join('')}</div>` : ''}`;
   }
 
   ask(m: Moment, disabled: Set<string>): Promise<string> {
     const choices = m.choices!.map(c => `<button class="choice" data-id="${c.id}" ${disabled.has(c.id) ? 'disabled' : ''}>${c.text}${disabled.has(c.id) ? '<span class="tried">tried</span>' : ''}</button>`).join('');
     const previews = devOn() ? m.choices!.filter(c => !c.correct).map(c =>
-      `<button class="dev-preview" data-p="${c.id}">preview: ${c.flag ? 'delayed set-back' : 'set-back'} for "${c.text.slice(0, 48)}${c.text.length > 48 ? '…' : ''}"</button>`).join('') : '';
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">DEV</span>${previews}</div>` : ''}`);
+      `<button class="dev-preview" data-p="${c.id}">preview: ${c.flag ? 'delayed set-back' : 'set-back'} for "${stripTips(c.text).slice(0, 48)}${c.text.length > 48 ? '…' : ''}"</button>`).join('') : '';
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">DEV</span>${previews}</div>` : ''}`);
     this.deskEl.querySelectorAll<HTMLButtonElement>('.dev-preview').forEach(b => b.addEventListener('click', () => {
       const c = m.choices!.find(x => x.id === b.dataset.p)!;
       if (c.consequence) this.preview(c.consequence);
@@ -264,20 +269,49 @@ export class UI {
     });
   }
 
-  checklist(m: Moment): Promise<number[]> {
-    const items = m.checklist!.items.map((it: ChecklistItem, i: number) =>
-      `<label class="check"><input type="checkbox" value="${i}"><span>${it.text}</span></label>`).join('');
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><div class="checks">${items}</div>
-      <button class="primary send">Send the Letter to WHO</button>`);
+  checklist(m: Moment, marks?: ChecklistMarks): Promise<number[]> {
+    const cl = m.checklist!;
+    const kept = new Set(marks?.picked ?? []);
+    const items = cl.items.map((it: ChecklistItem, i: number) => {
+      const wrong = marks?.wrong.includes(i), missing = marks?.missing.includes(i) || (marks?.noDomains && !!it.domain);
+      const cls = `check${wrong ? ' bad' : ''}${missing ? ' warn' : ''}`;
+      return `<label class="${cls}" data-i="${i}"><input type="checkbox" value="${i}"${kept.has(i) ? ' checked' : ''}><span>${it.text}${wrong && it.why ? `<small class="check-why">${it.why}</small>` : ''}</span></label>`;
+    }).join('');
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="checks">${items}</div>
+      ${cl.note ? `<p class="check-note">${cl.note}</p>` : ''}
+      ${marks ? '<div class="check-sum"></div>' : ''}
+      <button class="primary send">${cl.button ?? 'Send the Letter to WHO'}</button>`);
+    const boxes = [...this.deskEl.querySelectorAll<HTMLInputElement>('.check input')];
+    const sum = this.deskEl.querySelector<HTMLElement>('.check-sum');
+    const sync = () => {
+      if (!marks) return;
+      const on = (i: number) => boxes[i].checked;
+      let toRemove = 0, missing = 0;
+      boxes.forEach((b, i) => {
+        const lab = b.closest('label')!;
+        if (marks.wrong.includes(i)) { lab.classList.toggle('bad', b.checked); if (b.checked) toRemove++; }
+        if (marks.missing.includes(i)) { lab.classList.toggle('warn', !b.checked); if (!b.checked) missing++; }
+      });
+      let noDom = false;
+      if (marks.noDomains) {
+        noDom = !cl.items.some((it, i) => it.domain && on(i));
+        boxes.forEach((b, i) => { if (cl.items[i].domain) b.closest('label')!.classList.toggle('warn', noDom); });
+      }
+      const parts = [toRemove ? `${toRemove} to remove` : '', missing ? `${missing} missing` : '', noDom ? 'pick at least one trust domain' : ''].filter(Boolean);
+      sum!.textContent = parts.join(', ');
+      sum!.hidden = !parts.length;
+    };
+    boxes.forEach(b => b.addEventListener('change', sync));
+    sync();
     return new Promise(done => {
       this.deskEl.querySelector('.send')!.addEventListener('click', () => {
-        done([...this.deskEl.querySelectorAll<HTMLInputElement>('input:checked')].map(i => Number(i.value)));
+        done(boxes.filter(i => i.checked).map(i => Number(i.value)));
       });
     });
   }
 
   watch(m: Moment): Promise<void> {
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><button class="primary go">Watch</button>`);
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><button class="primary go">Watch</button>`);
     return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => done()));
   }
 
@@ -298,7 +332,7 @@ export class UI {
       <div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This would surface later, at its check. The call is made at: <b>${opts.origin}</b>.</p>` : ''}
-      <p><b>What happened.</b> ${c.what}</p>${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
+      <p><b>What happened.</b> ${T(c.what)}</p>${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
       <button class="primary">Close preview</button>
       <button class="desk-cat">${catSvg(catMood(this.detourCount))}</button></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
@@ -309,10 +343,10 @@ export class UI {
     this.openDesk(`<div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This goes back to an earlier call: <b>${opts.origin}</b>. It looked fine at the time.</p>` : ''}
-      <p><b>What happened.</b> ${c.what}</p>
-      ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-      ${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}
-      ${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
+      <p><b>What happened.</b> ${T(c.what)}</p>
+      ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${T(x)}</li>`).join('')}</ul>` : ''}
+      ${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}
+      ${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
       <button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button>
       ${catShows() ? `<button class="desk-cat" title="…">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
     this.bindCat(this.deskEl);
@@ -341,7 +375,7 @@ export class UI {
       <h3>Your route</h3>
       <div class="route">${routeSvg(MOMENTS.length, d.detours, true)}</div>
       ${d.detours.length ? `<h3>What sent things back</h3><ol class="detours">${d.detours.map(x =>
-        `<li><b>${x.title}</b> <span class="chip steps">WHO ${x.steps}</span> <span class="chip bad">+${x.days}</span><br>${x.why}${x.origin ? `<br><span class="origin-l">Decision made earlier, at: ${x.origin}</span>` : ''}</li>`).join('')}</ol>` : ''}
+        `<li><b>${x.title}</b> <span class="chip steps">WHO ${x.steps}</span> <span class="chip bad">+${x.days}</span><br>${T(x.why)}${x.origin ? `<br><span class="origin-l">Decision made earlier, at: ${stripTips(x.origin)}</span>` : ''}</li>`).join('')}</ol>` : ''}
       <h3>Where the keys live</h3>
       <div class="keys">
         <div class="k-col c-country"><b>${settings().country} keeps</b><ul><li>SCA private key, offline in the vault</li><li>TLS and Upload private keys</li><li>Document Signer private keys</li></ul></div>
@@ -350,7 +384,7 @@ export class UI {
         <div class="k-col c-network"><b>The Gateway publishes</b><ul><li>Whitelisted public keys</li><li>Trust lists for every participant</li></ul></div>
       </div>
       <h3>What to take back to your team</h3>
-      <ol class="learn">${MOMENTS.filter(m => m.learn).map(m => `<li>${m.learn}</li>`).join('')}</ol>
+      <ol class="learn">${MOMENTS.filter(m => m.learn).map(m => `<li>${T(m.learn)}</li>`).join('')}</ol>
       <div class="debrief-actions"><button class="primary again">Finish</button><button class="ghost print">Print this debrief</button></div>
     </div></div>`);
     el.querySelector('.print')!.addEventListener('click', () => window.print());
@@ -367,10 +401,13 @@ const LINKS = [
   { href: 'https://smart.who.int/trust/concepts_onboarding_checklist.html', title: 'Onboarding checklist', sub: 'Tools, certificates, repositories and tests, hands-on' },
   { href: 'https://github.com/WorldHealthOrganization/smart-trust', title: 'smart-trust on GitHub', sub: 'Source of the guide, with participant data' },
   { href: 'https://github.com/WorldHealthOrganization/tng-participant-template', title: 'tng-participant-template', sub: 'Template for your private key repositories' },
-  { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Where a Statement of Interest goes' },
+  { href: 'https://github.com/WorldHealthOrganization/GDHCNOnboardingWizard', title: 'WHO Onboarding Wizard (Windows)', sub: 'Repository, GPG and certificate steps on Windows' },
+  { href: 'https://smart.who.int/trust/concepts_onboarding.html#letters-of-application', title: 'Letter of Application templates', sub: 'One per trust domain, in several languages' },
+  { href: 'mailto:gdhcn-secretariat@who.int', title: 'gdhcn-secretariat@who.int', sub: 'Governance: Statement of Interest and Letters' },
+  { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Technical help during onboarding' },
 ];
 
-export function splash(root: HTMLElement, detours = 1): Promise<'again' | 'demo'> {
+export function splash(root: HTMLElement, detours = 1, domains: string[] = ['DDCC']): Promise<'again' | 'demo'> {
   const el = document.createElement('div');
   el.id = 'splash';
   el.className = 'overlay';
@@ -378,6 +415,7 @@ export function splash(root: HTMLElement, detours = 1): Promise<'again' | 'demo'
     <div class="splash-badge-wrap"><div class="splash-badge" aria-hidden="true">✓</div>${detours === 0 ? `<span class="splash-cat" title="A perfect run">${catSvg('crown')}</span>` : ''}</div>
     <div class="eyebrow">Simulation complete</div>
     <h1>Congratulations. ${settings().country} is live.</h1>
+    <p class="lede">Live in: ${domains.length < 2 ? domains.join('') : `${domains.slice(0, -1).join(', ')} and ${domains[domains.length - 1]}`}.</p>
     <p class="lede">You took ${settings().country} from a Statement of Interest to the production Trust Network Gateway: eligibility, keys, the Letter of Application, identity checks, WHO's offline signing, testing and go-live.</p>
     <h3>Take it further</h3>
     <div class="splash-links">${LINKS.map(l => `<a href="${l.href}" target="_blank" rel="noopener"><b>${l.title}</b><span>${l.sub}</span></a>`).join('')}</div>
@@ -410,17 +448,17 @@ function dashboardHtml(d: Doc) {
     const n = Number(raw);
     const tone = n <= 31 ? 'bad' : n <= 90 ? 'warn' : 'ok';
     const pct = Math.max(3, Math.min(100, (n / 1460) * 100));
-    return `<div class="dash-row ${d.mark?.includes(i) ? 'mark' : ''}"><span class="dash-l">${label}</span>
+    return `<div class="dash-row ${d.mark?.includes(i) ? 'mark' : ''}"><span class="dash-l">${T(label)}</span>
       <span class="dash-bar"><i class="g-${tone}" style="width:${pct}%"></i></span><span class="dash-n g-${tone}">${left(n)}</span></div>`;
   }).join('');
-  return `<div class="doc d-dashboard"><div class="doc-title">${GAUGE}${d.title}</div>
+  return `<div class="doc d-dashboard"><div class="doc-title">${GAUGE}${T(d.title)}</div>
     <div class="dash-tabs"><span>DEV</span><span>UAT</span><span class="on">PROD</span></div>${rows}</div>`;
 }
 
 function docHtml(d: Doc) {
   if (d.kind === 'dashboard') return dashboardHtml(d);
-  const lines = d.lines.map((l, i) => `<div class="${d.mark?.includes(i) ? 'mark' : ''}">${l}</div>`).join('');
-  return `<div class="doc d-${d.kind}"><div class="doc-title">${d.title}</div>${lines}</div>`;
+  const lines = d.lines.map((l, i) => `<div class="${d.mark?.includes(i) ? 'mark' : ''}">${T(l)}</div>`).join('');
+  return `<div class="doc d-${d.kind}"><div class="doc-title">${T(d.title)}</div>${lines}</div>`;
 }
 
 /** The progress line: phases as coloured segments, a dot per moment, red loops for detours. */
@@ -446,8 +484,8 @@ function routeSvg(index: number, detours: Detour[], final: boolean) {
   }).join('');
   const dots = xs.map((x, i) => {
     const cls = i < index || final ? 'done' : i === index ? 'now' : '';
-    const hit = final ? '' : `<circle cx="${x}" cy="${y}" r="16" class="s-hit" data-i="${i}"><title>${i + 1}. ${MOMENTS[i].title}</title></circle>`;
-    return `<circle cx="${x}" cy="${y}" r="${i === index && !final ? 9 : 5.5}" class="s-dot ${cls}"><title>${MOMENTS[i].title}</title></circle>${hit}`;
+    const hit = final ? '' : `<circle cx="${x}" cy="${y}" r="16" class="s-hit" data-i="${i}"><title>${i + 1}. ${stripTips(MOMENTS[i].title)}</title></circle>`;
+    return `<circle cx="${x}" cy="${y}" r="${i === index && !final ? 9 : 5.5}" class="s-dot ${cls}"><title>${stripTips(MOMENTS[i].title)}</title></circle>${hit}`;
   }).join('');
   return `<svg viewBox="0 0 ${W} ${final ? 110 : 56}" preserveAspectRatio="none">
     <line x1="${x0 - 8}" y1="${y}" x2="${x1 + 8}" y2="${y}" class="s-track"/>

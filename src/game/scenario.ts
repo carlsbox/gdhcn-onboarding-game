@@ -102,6 +102,31 @@ export const MOMENTS: Moment[] = [
     learn: 'Eligibility and the Terms of Participation are checked before any keys exist.',
   },
   {
+    id: 'domains', phase: 'A', title: 'Choose your trust domains', steps: 'Trust domains', place: 'ministry', role: 'legal', type: 'checklist',
+    brief: "A country applies for each trust domain it wants to join. Each domain has its own Letter of Application and its own legal and policy requirements ([[top|TOP2 and TOP3]]). {legalFirst} confirms which ones {country} has the mandate for.",
+    prompt: 'Tick every trust domain {country} applies for.',
+    checklist: {
+      note: 'A country can also join the Gateway with a general Letter and no trust domain yet. This simulation follows a country that joins at least one.',
+      button: 'Confirm trust domains',
+      minDomains: 1,
+      items: [
+        { text: 'DDCC · COVID-19 vaccination and test certificates', required: false, domain: 'DDCC' },
+        { text: 'ICVP · Yellow fever vaccination (International Certificate of Vaccination or Prophylaxis) · in development', required: false, domain: 'ICVP' },
+        { text: 'PH4H · Pan-American Highway for Digital Health (the Americas)', required: false, domain: 'PH4H' },
+        { text: 'IPS Pilgrimage · International Patient Summary for pilgrims', required: false, domain: 'IPS Pilgrimage' },
+        { text: 'No need to choose: one application covers every trust domain', required: false, why: 'Each trust domain has its own Letter and its own legal and policy requirements. Apply for each one you join.' },
+      ],
+      consequence: {
+        title: 'Trust domain unclear', by: 'WHO Secretariat', steps: 'Trust domains',
+        what: "WHO couldn't tell which trust domains {country} is applying for.", why: '',
+        days: 3, travel: { legs: [['paper', 1]], label: 'Application', kind: 'paper' },
+      },
+    },
+    success: { note: 'Applying for: {domains}.' },
+    days: 3,
+    learn: 'Countries apply per trust domain, and each domain has its own Letter and legal requirements.',
+  },
+  {
     id: 'team', phase: 'A', title: 'Name your team', steps: 'Representatives', place: 'ministry', role: 'business', type: 'choice',
     brief: 'WHO needs named people it can verify. {business}, the Business Owner, puts the team together.',
     docs: [{
@@ -238,7 +263,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'repos', phase: 'B', title: 'Set up the private repos', steps: 'Step 11', place: 'github', role: 'technical', type: 'choice',
-    brief: "{technicalFirst} creates the [[repo|private GitHub repositories]] that WHO's bot will read.",
+    brief: "{technicalFirst} creates the [[repo|private GitHub repositories]] that [[tngbot|WHO's bot]] will read.",
     docs: [{ kind: 'note', title: 'Repository setup', lines: ['tng-{code3Lower}-uat · public keys (PEM)', 'tng-{code3Lower}-prod · public keys (PEM)', 'Invite: ?'], mark: [2] }],
     prompt: 'How do you set them up?',
     choices: [
@@ -323,20 +348,20 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'letter', phase: 'B', title: 'Assemble the Letter of Application', steps: 'Step 14', place: 'ministry', role: 'legal', type: 'checklist',
-    brief: '{legalFirst} assembles the Letter of Application. WHO verifies everything else against it.',
+    brief: "{legalFirst} prepares a Letter of Application for each trust domain: {domains}. Keep it to the basics. The Letter names the people and points to the PROD repository; certificates and public keys live in GitHub.",
     prompt: 'Tick everything that belongs in the Letter, then send it.',
     checklist: {
       items: [
-        { text: 'Private repository URLs for UAT and PROD (DEV optional)', required: true },
+        { text: 'The PROD private repository name', required: true },
+        { text: 'GPG public key fingerprints of the named people', required: true },
+        { text: 'The four named contacts (Business Owner, Key Master, Legal, Technical) with official email addresses', required: true },
+        { text: 'Private repository URLs for UAT and DEV', required: false, why: 'Testing needs no Letter. Only the PROD repository goes in.' },
+        { text: 'SCA, TLS and Upload certificates', required: false, why: 'Certificates live in your GitHub repository, where tng-bot collects them.' },
+        { text: "{country}'s ISO participant code", required: false, why: 'WHO handles the participant code.' },
         { text: 'The SCA private key', required: false, why: 'Private keys never leave {country}.' },
-        { text: 'GPG public keys, per person and per environment', required: true },
-        { text: "{country}'s ISO participant code", required: true },
         { text: 'The GitHub access token, so WHO can log in', required: false, why: 'WHO never needs your GitHub login. The bot is invited instead.' },
-        { text: 'Contact details (with email) of the people authorised to provide certificates', required: true },
-        { text: 'SCA, TLS and Upload certificates', required: true },
         { text: 'Scanned passports of the team', required: false, why: 'Identity is checked face to face or through the diplomatic channel (steps 16–17).' },
-        { text: "A statement accepting other participants' keys in the gateway lists", required: true },
-        { text: 'Named Technical, Legal and Business Owner contacts', required: true },
+        { text: "A statement accepting other participants' keys in the gateway lists", required: false, why: 'Not part of the WHO Letter templates.' },
       ],
       consequence: {
         title: 'Letter returned', by: 'WHO Secretariat', steps: 'Steps 18–20',
@@ -344,9 +369,9 @@ export const MOMENTS: Moment[] = [
         days: 4, travel: { legs: [['paper', 1]], label: 'Letter of Application', kind: 'paper' },
       },
     },
-    success: { travel: [{ legs: [['paper', 1]], label: 'Letter of Application', kind: 'paper' }], note: 'Letter of Application received by WHO.' },
+    success: { travel: [{ legs: [['paper', 1]], label: 'Letter of Application', kind: 'paper' }], note: '{domainLetters} of Application received by WHO.' },
     days: 3,
-    learn: 'The Letter of Application ties people, GPG keys, repositories and certificates together.',
+    learn: 'The Letter names the people, their GPG keys and the PROD repository. Certificates stay in GitHub.',
   },
 
   // ---------------- C · WHO checks and setup ----------------

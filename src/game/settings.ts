@@ -15,6 +15,16 @@ export const DEFAULTS: Settings = {
   names: { business: 'Dr Zawadi Nkosi', keymaster: 'Kwame Mensah', legal: 'Sara Diallo', technical: 'Tendai Banda' },
 };
 
+/** Trust domains the player applies for this run. DDCC until chosen (dev jumps, the demo). */
+const DEFAULT_DOMAINS = ['DDCC'];
+let domains: string[] = [...DEFAULT_DOMAINS];
+export const getDomains = () => domains;
+export const setDomains = (d: string[]) => { domains = d.length ? [...d] : [...DEFAULT_DOMAINS]; };
+export const resetDomains = () => { domains = [...DEFAULT_DOMAINS]; };
+const joinList = (d: string[]) => d.length < 2 ? d.join('') : `${d.slice(0, -1).join(', ')} and ${d[d.length - 1]}`;
+/** Tokens that change during a run: left alone when the scenario is built, filled as each moment plays. */
+const LIVE = new Set(['domains', 'domainCount', 'domainLetters']);
+
 const KEY = 'gdhcn-game-settings';
 const TEMPLATE: Moment[] = structuredClone(MOMENTS);
 let current: Settings = structuredClone(DEFAULTS);
@@ -81,16 +91,22 @@ export function tokens(s: Settings): Record<string, string> {
     business: s.names.business, keymaster: s.names.keymaster, legal: s.names.legal, technical: s.names.technical,
     keymasterFirst: first(s.names.keymaster), legalFirst: first(s.names.legal), technicalFirst: first(s.names.technical),
     keymasterEmail: `${kmLocal}@${domain}`, keymasterPersonal: `${kmLocal}@gmail.com`,
+    domains: joinList(domains), domainCount: String(domains.length), domainLetters: `${domains.length} ${domains.length === 1 ? 'Letter' : 'Letters'}`,
   };
 }
 
-export function fill(text: string, s: Settings = current) {
+export function fill(text: string, s: Settings = current, keepLive = false) {
   const t = tokens(s);
-  return text.replace(/\{(\w+)\}/g, (m, k: string) => t[k] ?? m);
+  return text.replace(/\{(\w+)\}/g, (m, k: string) => (keepLive && LIVE.has(k) ? undefined : t[k]) ?? m);
+}
+
+/** The words of a moment that mention the run's trust domains, filled with the current choice. */
+export function liveMoment(m: Moment): Moment {
+  return { ...m, brief: fill(m.brief), prompt: fill(m.prompt) };
 }
 
 function deepFill<T>(v: T, s: Settings): T {
-  if (typeof v === 'string') return fill(v, s) as T;
+  if (typeof v === 'string') return fill(v, s, true) as T;
   if (Array.isArray(v)) return v.map(x => deepFill(x, s)) as T;
   if (v && typeof v === 'object') {
     return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, deepFill(x, s)])) as T;

@@ -166,6 +166,13 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 
 .checks { display: flex; flex-direction: column; gap: 6px; }
 .check { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 12px; background: #fff; border: 1px solid #e3e5f3; cursor: pointer; font-size: 14px; line-height: 1.35; }
+.check.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 9%, #fff); }
+.check.warn { border-color: var(--country); box-shadow: 0 0 0 1px var(--country); }
+.check-why { display: block; margin-top: 3px; font-size: 12.5px; color: var(--bad); }
+.check:not(.bad) .check-why { display: none; }
+.check-note { font-size: 12.5px; color: var(--ink-soft); margin: 8px 2px 0; }
+.check-sum { margin: 10px 2px 0; font-size: 13px; font-weight: 700; color: var(--bad); }
+.check-sum:not([hidden]) { display: block; }
 .check input { margin-top: 2px; width: 17px; height: 17px; accent-color: var(--ink); flex: none; }
 
 #desk.returned { background: rgba(255, 246, 246, .9); }

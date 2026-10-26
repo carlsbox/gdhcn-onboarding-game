@@ -13,6 +13,9 @@ const h = (html: string) => {
 };
 
 export interface Detour { index: number; title: string; steps: string; why: string; days: number; origin?: string }
+/** What a failed checklist submit tells the retry: the ticks to keep and the items to flag. */
+export interface ChecklistMarks { picked: number[]; wrong: number[]; missing: number[]; noDomains: boolean }
+
 export interface DebriefData { days: number; ideal: number; detours: Detour[] }
 
 const PHASE_ORDER: Phase[] = ['A', 'B', 'C', 'D', 'E'];
@@ -265,14 +268,43 @@ export class UI {
     });
   }
 
-  checklist(m: Moment): Promise<number[]> {
-    const items = m.checklist!.items.map((it: ChecklistItem, i: number) =>
-      `<label class="check"><input type="checkbox" value="${i}"><span>${it.text}</span></label>`).join('');
+  checklist(m: Moment, marks?: ChecklistMarks): Promise<number[]> {
+    const cl = m.checklist!;
+    const kept = new Set(marks?.picked ?? []);
+    const items = cl.items.map((it: ChecklistItem, i: number) => {
+      const wrong = marks?.wrong.includes(i), missing = marks?.missing.includes(i) || (marks?.noDomains && !!it.domain);
+      const cls = `check${wrong ? ' bad' : ''}${missing ? ' warn' : ''}`;
+      return `<label class="${cls}" data-i="${i}"><input type="checkbox" value="${i}"${kept.has(i) ? ' checked' : ''}><span>${it.text}${wrong && it.why ? `<small class="check-why">${it.why}</small>` : ''}</span></label>`;
+    }).join('');
     this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="checks">${items}</div>
-      <button class="primary send">Send the Letter to WHO</button>`);
+      ${cl.note ? `<p class="check-note">${cl.note}</p>` : ''}
+      ${marks ? '<div class="check-sum"></div>' : ''}
+      <button class="primary send">${cl.button ?? 'Send the Letter to WHO'}</button>`);
+    const boxes = [...this.deskEl.querySelectorAll<HTMLInputElement>('.check input')];
+    const sum = this.deskEl.querySelector<HTMLElement>('.check-sum');
+    const sync = () => {
+      if (!marks) return;
+      const on = (i: number) => boxes[i].checked;
+      let toRemove = 0, missing = 0;
+      boxes.forEach((b, i) => {
+        const lab = b.closest('label')!;
+        if (marks.wrong.includes(i)) { lab.classList.toggle('bad', b.checked); if (b.checked) toRemove++; }
+        if (marks.missing.includes(i)) { lab.classList.toggle('warn', !b.checked); if (!b.checked) missing++; }
+      });
+      let noDom = false;
+      if (marks.noDomains) {
+        noDom = !cl.items.some((it, i) => it.domain && on(i));
+        boxes.forEach((b, i) => { if (cl.items[i].domain) b.closest('label')!.classList.toggle('warn', noDom); });
+      }
+      const parts = [toRemove ? `${toRemove} to remove` : '', missing ? `${missing} missing` : '', noDom ? 'pick at least one trust domain' : ''].filter(Boolean);
+      sum!.textContent = parts.join(', ');
+      sum!.hidden = !parts.length;
+    };
+    boxes.forEach(b => b.addEventListener('change', sync));
+    sync();
     return new Promise(done => {
       this.deskEl.querySelector('.send')!.addEventListener('click', () => {
-        done([...this.deskEl.querySelectorAll<HTMLInputElement>('input:checked')].map(i => Number(i.value)));
+        done(boxes.filter(i => i.checked).map(i => Number(i.value)));
       });
     });
   }
@@ -373,7 +405,7 @@ const LINKS = [
   { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Technical help during onboarding' },
 ];
 
-export function splash(root: HTMLElement, detours = 1): Promise<'again' | 'demo'> {
+export function splash(root: HTMLElement, detours = 1, domains: string[] = ['DDCC']): Promise<'again' | 'demo'> {
   const el = document.createElement('div');
   el.id = 'splash';
   el.className = 'overlay';
@@ -381,6 +413,7 @@ export function splash(root: HTMLElement, detours = 1): Promise<'again' | 'demo'
     <div class="splash-badge-wrap"><div class="splash-badge" aria-hidden="true">✓</div>${detours === 0 ? `<span class="splash-cat" title="A perfect run">${catSvg('crown')}</span>` : ''}</div>
     <div class="eyebrow">Simulation complete</div>
     <h1>Congratulations. ${settings().country} is live.</h1>
+    <p class="lede">Live in: ${domains.length < 2 ? domains.join('') : `${domains.slice(0, -1).join(', ')} and ${domains[domains.length - 1]}`}.</p>
     <p class="lede">You took ${settings().country} from a Statement of Interest to the production Trust Network Gateway: eligibility, keys, the Letter of Application, identity checks, WHO's offline signing, testing and go-live.</p>
     <h3>Take it further</h3>
     <div class="splash-links">${LINKS.map(l => `<a href="${l.href}" target="_blank" rel="noopener"><b>${l.title}</b><span>${l.sub}</span></a>`).join('')}</div>

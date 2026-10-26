@@ -291,6 +291,8 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 }
 .demo-bar > button { border: 0; background: #e4e7f6; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; font-size: 16px; }
 .demo-bar > button:hover { background: #d8dcf3; }
+.demo-speed { height: 40px; border: 0; border-radius: 12px; background: #e4e7f6; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; padding: 0 2px; cursor: pointer; }
+.demo-speed:hover { background: #d8dcf3; }
 .demo-play { background: var(--ink) !important; color: #fff; }
 .demo-voice.on { background: #dcf6f2 !important; }
 .demo-dots { display: flex; gap: 6px; padding: 0 8px; }

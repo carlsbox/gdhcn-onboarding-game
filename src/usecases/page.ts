@@ -18,6 +18,8 @@ export class UseCasesPage {
     this.el.hidden = true;
     root.appendChild(this.el);
     this.el.addEventListener('click', e => {
+      const lang = (e.target as HTMLElement).closest<HTMLElement>('[data-lang]');
+      if (lang) { this.setLang(lang.dataset.lang === 'fr' ? 'fr' : 'en'); return; }
       const t = (e.target as HTMLElement).closest<HTMLElement>('[data-uc],[data-a]');
       if (!t) { if (e.target === this.el) this.close(); return; }
       if (t.dataset.uc) this.open(t.dataset.uc);
@@ -54,6 +56,25 @@ export class UseCasesPage {
 
   private stopVideo() { this.el.querySelector('video')?.pause(); }
 
+  private getLang(): 'en' | 'fr' {
+    try { return sessionStorage.getItem('uc-lang') === 'fr' ? 'fr' : 'en'; } catch { return 'en'; }
+  }
+
+  /** Switch the film language: swap src, pause, back to the start. The poster attribute is kept. */
+  private setLang(lang: 'en' | 'fr') {
+    try { sessionStorage.setItem('uc-lang', lang); } catch { /* ignore */ }
+    const v = this.el.querySelector<HTMLVideoElement>('video.uc-video');
+    const id = /^#usecase\/([\w-]+)/.exec(location.hash)?.[1];
+    const uc = USE_CASES.find(u => u.id === id);
+    if (!v || !uc?.videoFr) return;
+    v.pause();
+    v.src = asset(lang === 'fr' ? uc.videoFr : uc.video);
+    v.load();
+    v.currentTime = 0;
+    this.el.querySelectorAll<HTMLElement>('[data-lang]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+  }
+
   private gallery() {
     return `<div class="uc-card glass">
       <div class="uc-top"><div class="eyebrow">Use cases</div><button class="uc-x" data-a="close" aria-label="Close">✕</button></div>
@@ -71,12 +92,19 @@ export class UseCasesPage {
 
   private detail(u: UseCase) {
     const others = USE_CASES.filter(o => o.id !== u.id);
+    const lang = u.videoFr ? this.getLang() : 'en';
+    const src = lang === 'fr' && u.videoFr ? u.videoFr : u.video;
+    const langSwitch = u.videoFr ? `<div class="uc-lang" role="group" aria-label="Film language">
+        <button type="button" data-lang="en" aria-pressed="${lang === 'en'}">English</button>
+        <button type="button" data-lang="fr" aria-pressed="${lang === 'fr'}" lang="fr">Français</button>
+      </div>` : '';
     return `<div class="uc-card glass">
       <div class="uc-top"><button class="nav-btn" data-a="gallery">← All use cases</button><button class="uc-x" data-a="close" aria-label="Close">✕</button></div>
       <div class="uc-tag">${u.tag}</div>
       <h1>${u.title}</h1>
       <p class="uc-sub big">${u.subtitle}</p>
-      <video class="uc-video" controls playsinline preload="metadata" poster="${asset(u.poster)}" src="${asset(u.video)}"></video>
+      ${langSwitch}
+      <video class="uc-video" controls playsinline preload="metadata" poster="${asset(u.poster)}" src="${asset(src)}"></video>
       <blockquote class="uc-idea">${u.idea}</blockquote>
       <h3>What the film shows</h3>
       <p>${u.summary}</p>

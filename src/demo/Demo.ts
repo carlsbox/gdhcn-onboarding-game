@@ -318,7 +318,7 @@ export class Demo {
     this.audio.pause();
     const file = `audio/demo/${lang() === 'fr' ? 'fr/' : ''}beat-${String(i + 1).padStart(2, '0')}.mp3`;
     if (lang() === 'fr') {
-      // French narration is recorded later: play it only if the file is there, otherwise the beat runs silent
+      // play the French clip only if the file is there, otherwise the beat runs silent
       this.audio.removeAttribute('src'); this.audio.load();
       this.speaking = false;
       const gen = this.gen;
@@ -326,6 +326,7 @@ export class Demo {
         if (!ok || gen !== this.gen) return;
         this.audio.src = `${import.meta.env.BASE_URL}${file}`;
         this.audio.muted = !this.sound;
+        this.audio.playbackRate = speed; // setting src can reset it
         this.speaking = true;
         this.audio.play().catch(e => this.blocked(e));
       });

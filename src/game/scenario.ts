@@ -62,10 +62,10 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'eligibility', phase: 'A', title: 'Prove you are eligible', steps: 'Steps 2–8', place: 'ministry', role: 'legal', type: 'choice',
-    brief: 'WHO checks that the applicant is eligible and accepts the Terms of Participation. {legalFirst}, your Legal representative, prepares the response.',
+    brief: 'WHO checks that the applicant is eligible and accepts the [[top|Terms of Participation (TOP)]]. {legalFirst}, your Legal representative, prepares the response.',
     docs: [{
       kind: 'note', title: 'Terms of Participation', lines: [
-        'TOP0 · Share credentials for an mTLS connection to the Gateway',
+        '[[top|TOP0]] · Share credentials for an mTLS connection to the Gateway',
         'TOP1 · Follow the PKI technical specifications',
         'TOP2 · Follow the certificate and API specifications for each trust domain',
         'TOP3 · Meet the policy and regulatory standards for each trust domain',
@@ -133,7 +133,7 @@ export const MOMENTS: Moment[] = [
   // ---------------- B · Prepare keys ----------------
   {
     id: 'tools', phase: 'B', title: 'Set up the workbench', steps: 'Onboarding checklist', place: 'backend', role: 'technical', type: 'choice',
-    brief: '{technicalFirst} sets up the tools: OpenSSL, cURL, Git, GPG and a GitHub account.',
+    brief: '{technicalFirst} sets up the tools: OpenSSL, cURL, Git, [[gpg|GPG]] and a [[github|GitHub]] account.',
     docs: [{
       kind: 'terminal', title: "{technicalFirst}'s Windows laptop", lines: [
         '> openssl version', 'OpenSSL 3.0.13', '> git --version', 'git version 2.45.1',
@@ -160,9 +160,9 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'certs', phase: 'B', title: 'Create your certificates', steps: 'Step 9', place: 'backend', role: 'keymaster', type: 'choice',
-    brief: "{keymasterFirst} creates {country}'s certificates. Each environment needs its own Signing CA (SCA), TLS client certificate and Upload certificate: DEV (optional), UAT and PROD.",
+    brief: "{keymasterFirst} creates {country}'s certificates. Each environment needs its own [[sca|Signing CA (SCA)]], [[tls|TLS client certificate]] and [[upload|Upload certificate]]: [[dev]] (optional), [[uat]] and [[prod]].",
     docs: [
-      { kind: 'cert', title: 'SCA · Signing CA', lines: ["{country}'s trust anchor", 'Issues Document Signer Certificates (DSCs)'] },
+      { kind: 'cert', title: 'SCA · Signing CA', lines: ["{country}'s trust anchor", 'Issues [[dsc|Document Signer Certificates (DSCs)]]'] },
       { kind: 'cert', title: 'TLS client certificate', lines: ["Proves your backend's identity to the Gateway (mTLS)"] },
       { kind: 'cert', title: 'Upload certificate', lines: ['Signs the packages you upload to the Gateway'] },
     ],
@@ -216,7 +216,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'gpg', phase: 'B', title: 'Create GPG keys', steps: 'Step 10', place: 'backend', role: 'keymaster', type: 'choice',
-    brief: 'Every person authorised to provide key material needs a GPG key for each environment. WHO will compare it with the Letter of Application.',
+    brief: 'Every person authorised to provide key material needs a [[gpg|GPG key]] for each environment. WHO will compare it with the Letter of Application.',
     docs: [{ kind: 'key', title: 'New GPG key · {keymaster}', lines: ['Algorithm: RSA 4096', 'Email: ?'], mark: [1] }],
     prompt: "Which email goes in {keymasterFirst}'s GPG key?",
     choices: [
@@ -238,7 +238,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'repos', phase: 'B', title: 'Set up the private repos', steps: 'Step 11', place: 'github', role: 'technical', type: 'choice',
-    brief: "{technicalFirst} creates the private GitHub repositories that WHO's bot will read.",
+    brief: "{technicalFirst} creates the [[repo|private GitHub repositories]] that WHO's bot will read.",
     docs: [{ kind: 'note', title: 'Repository setup', lines: ['tng-{code3Lower}-uat · public keys (PEM)', 'tng-{code3Lower}-prod · public keys (PEM)', 'Invite: ?'], mark: [2] }],
     prompt: 'How do you set them up?',
     choices: [
@@ -404,7 +404,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'airgap', phase: 'C', title: 'WHO signs PROD offline', steps: 'Steps 36–50', place: 'ops', role: 'who', type: 'choice',
-    brief: "PROD is different. WHO verifies the pull request, then signs your PROD keys with its Trust Anchor in an air-gapped process. The Trust Anchor's private key is never on the online gateway.",
+    brief: "PROD is different. WHO verifies the pull request, then signs your PROD keys with its [[anchor|Trust Anchor]] in an air-gapped process. The Trust Anchor's private key is never on the [[gateway|online gateway]].",
     prompt: 'Your team asks how to speed this up. What do you say?',
     choices: [
       { id: 'wait', correct: true, text: "Wait for WHO's air-gapped signing and get ready for testing" },

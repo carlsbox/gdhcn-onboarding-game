@@ -1,5 +1,6 @@
 import { MOMENTS } from './scenario';
 import { settings } from './settings';
+import { stripTips } from './glossary';
 import { setFeedbackContext } from '../ui/feedback';
 import { PHASES } from './scenario';
 import type { Consequence, Moment, Travel } from './types';
@@ -149,7 +150,7 @@ export class Game {
       this.world.bot.setMood('idle');
       return;
     }
-    this.ui.toast(s.note, 'ok');
+    this.ui.toast(stripTips(s.note), 'ok');
     await wait(900);
   }
 

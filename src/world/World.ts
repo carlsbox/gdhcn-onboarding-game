@@ -12,6 +12,13 @@ import {
 } from './models';
 import { Bot } from './Bot';
 
+/** A 3D label that shows the GitHub glossary tooltip (the label layer itself ignores the pointer). */
+function tipLabel(el: HTMLElement) {
+  el.dataset.tip = 'github';
+  el.tabIndex = 0;
+  el.classList.add('has-tip');
+}
+
 export type PlaceId = 'ministry' | 'backend' | 'uat' | 'prod' | 'secretariat' | 'ops' | 'github' | 'dashboard';
 export type RouteId =
   | 'paper' | 'ministry-backend' | 'secretariat-ops'
@@ -147,7 +154,8 @@ export class World {
     this.places[id] = { pos: new THREE.Vector3(x, 0, z), name, blurb, group };
     const gw = id === 'uat' || id === 'prod';
     // gateway labels sit beside the gateway; building labels float above the roofline
-    this.label(this.scene, name, x + (gw ? 2.6 : 0), gw ? 1.4 : 3.6, z);
+    const el = this.label(this.scene, name, x + (gw ? 2.6 : 0), gw ? 1.4 : 3.6, z);
+    if (id === 'github') tipLabel(el);
   }
 
   private buildWorld() {
@@ -163,7 +171,7 @@ export class World {
     this.countryLabel = this.label(s, 'COUNTRY XC', -10, 0, -9.6, 'w-territory t-country');
     this.label(s, 'TRUST NETWORK GATEWAY', 0, 0, -8.4, 'w-territory t-network');
     this.label(s, 'WHO', 10, 0, -9.6, 'w-territory t-who');
-    this.label(s, 'GITHUB · third party', 0, 0.4, 13.7, 'w-territory t-github');
+    tipLabel(this.label(s, 'GITHUB · third party', 0, 0.4, 13.7, 'w-territory t-github'));
     // WHO-run certificate expiry dashboard (Grafana, one per environment), on its own island south of WHO
     const dash = new THREE.Group(); dash.position.set(10, 0, 11); s.add(dash);
     add(dash, new RoundedBoxGeometry(5.6, 0.9, 4.4, 6, 0.42), std(C.base), 0, -0.35, 0);

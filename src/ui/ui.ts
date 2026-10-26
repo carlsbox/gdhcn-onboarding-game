@@ -4,6 +4,7 @@ import { DEFAULTS, deriveCode, settings, type Person, type Settings } from '../g
 import { devOn, devUnlocked, jumpTo, setDevOn } from './dev';
 import { catLine, catMood, catShows, catsFound, catSvg, mrrp } from './cat';
 import { USE_CASES } from '../usecases/data';
+import { renderTips as T, stripTips } from '../game/glossary';
 
 const h = (html: string) => {
   const t = document.createElement('template');
@@ -242,15 +243,15 @@ export class UI {
     return `<div class="desk-head"><span class="avatar r-${m.role}">${r.initials}</span>
       <div><div class="desk-who">${m.role === 'who' ? 'WHO' : r.name}</div><div class="desk-sub">${m.role === 'who' ? 'Watch what WHO does' : r.title}</div></div>
       <span class="chip steps">WHO ${m.steps}</span></div>
-      <h2>${m.title}</h2><p class="brief">${m.brief}</p>
+      <h2>${m.title}</h2><p class="brief">${T(m.brief)}</p>
       ${m.docs ? `<div class="docs">${m.docs.map(docHtml).join('')}</div>` : ''}`;
   }
 
   ask(m: Moment, disabled: Set<string>): Promise<string> {
     const choices = m.choices!.map(c => `<button class="choice" data-id="${c.id}" ${disabled.has(c.id) ? 'disabled' : ''}>${c.text}${disabled.has(c.id) ? '<span class="tried">tried</span>' : ''}</button>`).join('');
     const previews = devOn() ? m.choices!.filter(c => !c.correct).map(c =>
-      `<button class="dev-preview" data-p="${c.id}">preview: ${c.flag ? 'delayed set-back' : 'set-back'} for "${c.text.slice(0, 48)}${c.text.length > 48 ? '…' : ''}"</button>`).join('') : '';
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">DEV</span>${previews}</div>` : ''}`);
+      `<button class="dev-preview" data-p="${c.id}">preview: ${c.flag ? 'delayed set-back' : 'set-back'} for "${stripTips(c.text).slice(0, 48)}${c.text.length > 48 ? '…' : ''}"</button>`).join('') : '';
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">DEV</span>${previews}</div>` : ''}`);
     this.deskEl.querySelectorAll<HTMLButtonElement>('.dev-preview').forEach(b => b.addEventListener('click', () => {
       const c = m.choices!.find(x => x.id === b.dataset.p)!;
       if (c.consequence) this.preview(c.consequence);
@@ -267,7 +268,7 @@ export class UI {
   checklist(m: Moment): Promise<number[]> {
     const items = m.checklist!.items.map((it: ChecklistItem, i: number) =>
       `<label class="check"><input type="checkbox" value="${i}"><span>${it.text}</span></label>`).join('');
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><div class="checks">${items}</div>
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="checks">${items}</div>
       <button class="primary send">Send the Letter to WHO</button>`);
     return new Promise(done => {
       this.deskEl.querySelector('.send')!.addEventListener('click', () => {
@@ -277,7 +278,7 @@ export class UI {
   }
 
   watch(m: Moment): Promise<void> {
-    this.openDesk(`${this.header(m)}<div class="prompt">${m.prompt}</div><button class="primary go">Watch</button>`);
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><button class="primary go">Watch</button>`);
     return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => done()));
   }
 
@@ -298,7 +299,7 @@ export class UI {
       <div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This would surface later, at its check. The call is made at: <b>${opts.origin}</b>.</p>` : ''}
-      <p><b>What happened.</b> ${c.what}</p>${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
+      <p><b>What happened.</b> ${T(c.what)}</p>${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
       <button class="primary">Close preview</button>
       <button class="desk-cat">${catSvg(catMood(this.detourCount))}</button></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
@@ -309,10 +310,10 @@ export class UI {
     this.openDesk(`<div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This goes back to an earlier call: <b>${opts.origin}</b>. It looked fine at the time.</p>` : ''}
-      <p><b>What happened.</b> ${c.what}</p>
-      ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
-      ${c.why ? `<p><b>Why.</b> ${c.why}</p>` : ''}
-      ${opts.fix ? `<p class="fix"><b>The fix.</b> ${opts.fix}</p>` : ''}
+      <p><b>What happened.</b> ${T(c.what)}</p>
+      ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${T(x)}</li>`).join('')}</ul>` : ''}
+      ${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}
+      ${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
       <button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button>
       ${catShows() ? `<button class="desk-cat" title="…">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
     this.bindCat(this.deskEl);
@@ -341,7 +342,7 @@ export class UI {
       <h3>Your route</h3>
       <div class="route">${routeSvg(MOMENTS.length, d.detours, true)}</div>
       ${d.detours.length ? `<h3>What sent things back</h3><ol class="detours">${d.detours.map(x =>
-        `<li><b>${x.title}</b> <span class="chip steps">WHO ${x.steps}</span> <span class="chip bad">+${x.days}</span><br>${x.why}${x.origin ? `<br><span class="origin-l">Decision made earlier, at: ${x.origin}</span>` : ''}</li>`).join('')}</ol>` : ''}
+        `<li><b>${x.title}</b> <span class="chip steps">WHO ${x.steps}</span> <span class="chip bad">+${x.days}</span><br>${T(x.why)}${x.origin ? `<br><span class="origin-l">Decision made earlier, at: ${stripTips(x.origin)}</span>` : ''}</li>`).join('')}</ol>` : ''}
       <h3>Where the keys live</h3>
       <div class="keys">
         <div class="k-col c-country"><b>${settings().country} keeps</b><ul><li>SCA private key, offline in the vault</li><li>TLS and Upload private keys</li><li>Document Signer private keys</li></ul></div>
@@ -350,7 +351,7 @@ export class UI {
         <div class="k-col c-network"><b>The Gateway publishes</b><ul><li>Whitelisted public keys</li><li>Trust lists for every participant</li></ul></div>
       </div>
       <h3>What to take back to your team</h3>
-      <ol class="learn">${MOMENTS.filter(m => m.learn).map(m => `<li>${m.learn}</li>`).join('')}</ol>
+      <ol class="learn">${MOMENTS.filter(m => m.learn).map(m => `<li>${T(m.learn)}</li>`).join('')}</ol>
       <div class="debrief-actions"><button class="primary again">Finish</button><button class="ghost print">Print this debrief</button></div>
     </div></div>`);
     el.querySelector('.print')!.addEventListener('click', () => window.print());
@@ -412,17 +413,17 @@ function dashboardHtml(d: Doc) {
     const n = Number(raw);
     const tone = n <= 31 ? 'bad' : n <= 90 ? 'warn' : 'ok';
     const pct = Math.max(3, Math.min(100, (n / 1460) * 100));
-    return `<div class="dash-row ${d.mark?.includes(i) ? 'mark' : ''}"><span class="dash-l">${label}</span>
+    return `<div class="dash-row ${d.mark?.includes(i) ? 'mark' : ''}"><span class="dash-l">${T(label)}</span>
       <span class="dash-bar"><i class="g-${tone}" style="width:${pct}%"></i></span><span class="dash-n g-${tone}">${left(n)}</span></div>`;
   }).join('');
-  return `<div class="doc d-dashboard"><div class="doc-title">${GAUGE}${d.title}</div>
+  return `<div class="doc d-dashboard"><div class="doc-title">${GAUGE}${T(d.title)}</div>
     <div class="dash-tabs"><span>DEV</span><span>UAT</span><span class="on">PROD</span></div>${rows}</div>`;
 }
 
 function docHtml(d: Doc) {
   if (d.kind === 'dashboard') return dashboardHtml(d);
-  const lines = d.lines.map((l, i) => `<div class="${d.mark?.includes(i) ? 'mark' : ''}">${l}</div>`).join('');
-  return `<div class="doc d-${d.kind}"><div class="doc-title">${d.title}</div>${lines}</div>`;
+  const lines = d.lines.map((l, i) => `<div class="${d.mark?.includes(i) ? 'mark' : ''}">${T(l)}</div>`).join('');
+  return `<div class="doc d-${d.kind}"><div class="doc-title">${T(d.title)}</div>${lines}</div>`;
 }
 
 /** The progress line: phases as coloured segments, a dot per moment, red loops for detours. */
@@ -448,8 +449,8 @@ function routeSvg(index: number, detours: Detour[], final: boolean) {
   }).join('');
   const dots = xs.map((x, i) => {
     const cls = i < index || final ? 'done' : i === index ? 'now' : '';
-    const hit = final ? '' : `<circle cx="${x}" cy="${y}" r="16" class="s-hit" data-i="${i}"><title>${i + 1}. ${MOMENTS[i].title}</title></circle>`;
-    return `<circle cx="${x}" cy="${y}" r="${i === index && !final ? 9 : 5.5}" class="s-dot ${cls}"><title>${MOMENTS[i].title}</title></circle>${hit}`;
+    const hit = final ? '' : `<circle cx="${x}" cy="${y}" r="16" class="s-hit" data-i="${i}"><title>${i + 1}. ${stripTips(MOMENTS[i].title)}</title></circle>`;
+    return `<circle cx="${x}" cy="${y}" r="${i === index && !final ? 9 : 5.5}" class="s-dot ${cls}"><title>${stripTips(MOMENTS[i].title)}</title></circle>${hit}`;
   }).join('');
   return `<svg viewBox="0 0 ${W} ${final ? 110 : 56}" preserveAspectRatio="none">
     <line x1="${x0 - 8}" y1="${y}" x2="${x1 + 8}" y2="${y}" class="s-track"/>

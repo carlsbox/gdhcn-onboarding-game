@@ -513,3 +513,16 @@ kbd { font: 700 11.5px system-ui, sans-serif; padding: 1px 6px; border-radius: 6
   .title-wrap { flex-direction: column; align-items: center; }
   .title-wrap .title-card, .title-side { flex: none; width: 100%; max-width: 640px; }
 }
+
+/* ---------- glossary tooltips ---------- */
+.tip, [data-tip] { cursor: help; }
+.tip { text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; text-decoration-color: var(--ink-soft); border-radius: 3px; }
+.tip:hover, .tip:focus-visible { text-decoration-color: var(--who); outline: none; background: rgba(79, 128, 224, .1); }
+#tip-pop {
+  position: fixed; z-index: 200; max-width: min(320px, calc(100vw - 20px)); pointer-events: none;
+  padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.45; color: var(--ink);
+  background: var(--glass-strong); backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+#tip-pop[hidden] { display: none; }
+#tip-pop b { display: block; margin-bottom: 3px; font-size: 15px; }
+.w-label.has-tip, .w-territory.has-tip { pointer-events: auto; }

@@ -158,17 +158,17 @@ export const MOMENTS: Moment[] = [
   // ---------------- B · Prepare keys ----------------
   {
     id: 'tools', phase: 'B', title: 'Set up the workbench', steps: 'Onboarding checklist', place: 'backend', role: 'technical', type: 'choice',
-    brief: '{technicalFirst} sets up the tools: OpenSSL, cURL, Git, [[gpg|GPG]] and a [[github|GitHub]] account.',
+    brief: "{technicalFirst} sets up the tools: OpenSSL, cURL, Git, [[gpg|GPG]] and a [[github|GitHub]] account. On Windows, WHO's <a href=\"https://github.com/WorldHealthOrganization/GDHCNOnboardingWizard\" target=\"_blank\" rel=\"noopener\">Onboarding Wizard</a> can do the repository, GPG and certificate steps for you.",
     docs: [{
-      kind: 'terminal', title: "{technicalFirst}'s Windows laptop", lines: [
-        '> openssl version', 'OpenSSL 3.0.13', '> git --version', 'git version 2.45.1',
-        '> gpg --version', 'gpg (GnuPG) 2.4.5', '> curl --version', 'curl 8.4.0 (Windows) Schannel',
+      kind: 'terminal', title: "{technicalFirst}'s laptop", lines: [
+        '$ openssl version', 'OpenSSL 3.0.13 30 Jan 2024', '$ git --version', 'git version 2.45.1',
+        '$ curl --version', 'curl 8.5.0 (x86_64-pc-linux-gnu) libcurl/8.5.0 OpenSSL/3.0.13', '$ gpg --version', 'bash: gpg: command not found',
       ], mark: [7],
     }],
-    prompt: 'Which cURL will you use for the Gateway tests later on?',
+    prompt: 'GPG is missing. Do you need every tool?',
     choices: [
-      { id: 'openssl', correct: true, text: 'Install a cURL build that uses OpenSSL' },
-      { id: 'schannel', flag: 'schannel', text: "Keep the cURL that ships with Windows; it's already installed" },
+      { id: 'all', correct: true, text: 'Install GPG too: every named person needs a GPG key, and the release tag must be signed' },
+      { id: 'nogpg', flag: 'nogpg', text: 'Skip GPG; Git and OpenSSL cover what we need' },
       {
         id: 'skip', text: 'Skip cURL; WHO tests the connection for us',
         consequence: {
@@ -181,7 +181,7 @@ export const MOMENTS: Moment[] = [
     ],
     success: { note: 'Workbench ready.' },
     days: 2,
-    learn: "Tools matter: Windows' built-in cURL (Schannel) can't present your certificate, so use an OpenSSL build.",
+    learn: "Set up every tool before you start: OpenSSL, cURL, Git and GPG. On Windows, WHO's Onboarding Wizard can help.",
   },
   {
     id: 'certs', phase: 'B', title: 'Create your certificates', steps: 'Step 9', place: 'backend', role: 'keymaster', type: 'choice',
@@ -257,6 +257,16 @@ export const MOMENTS: Moment[] = [
         },
       },
     ],
+    checks: [{
+      flag: 'nogpg',
+      consequence: {
+        title: "GPG isn't installed", by: 'Your own workbench', steps: 'Step 10',
+        what: "{keymasterFirst} can't create a GPG key: GPG was never installed on the workbench.",
+        why: 'Every named person signs with a GPG key, and tng-bot only accepts a GPG-signed tag.',
+        days: 2,
+      },
+      fix: '{technicalFirst} installs GPG, then {keymasterFirst} creates the key.',
+    }],
     success: { note: 'GPG keys created for each authorised person, per environment.' },
     days: 1,
     learn: 'The email inside each GPG key must match the email in the Letter of Application.',
@@ -488,16 +498,6 @@ export const MOMENTS: Moment[] = [
         },
       },
     ],
-    checks: [{
-      flag: 'schannel',
-      consequence: {
-        title: 'Connection fails', by: 'UAT gateway', steps: 'Step 61',
-        what: "Windows' built-in cURL (Schannel) couldn't present the PEM certificate and key.",
-        why: 'Use a cURL build linked to OpenSSL.',
-        days: 2, travel: { legs: [['backend-uat', 1]], label: 'GET /trustList', kind: 'data' },
-      },
-      fix: '{technicalFirst} installs an OpenSSL build of cURL and runs the test again.',
-    }],
     success: {
       travel: [
         { legs: [['backend-uat', 1]], label: 'GET /trustList (mTLS)', kind: 'data' },

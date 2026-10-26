@@ -320,7 +320,7 @@ export function dashboard(): THREE.Group {
 }
 
 /** Easter egg: a small cat, sitting or curled up asleep. Ground at y = 0. */
-export function cat(sleeping = false): THREE.Group {
+export function cat(sleeping = false, opts: { bandit?: boolean } = {}): THREE.Group {
   const g = new THREE.Group();
   const fur = std('#e8a35c', { roughness: 0.8 }), pale = std('#fff3e3', { roughness: 0.8 }), pink = std('#f2a7b0');
   if (sleeping) {
@@ -336,6 +336,15 @@ export function cat(sleeping = false): THREE.Group {
     const body = add(g, new THREE.SphereGeometry(0.15, 20, 14), fur, 0, 0.15, 0); body.scale.set(1, 1.15, 0.85);
     add(g, new THREE.SphereGeometry(0.08, 14, 10), pale, 0, 0.17, 0.09);
     add(g, new THREE.SphereGeometry(0.105, 18, 12), fur, 0, 0.35, 0.04);
+    if (opts.bandit) {
+      // a black mask: a band round the front of the head at eye height, with the eyes showing on top
+      const ink = std('#17171c', { roughness: 0.7 }), eye = std('#fffbe8', { roughness: 0.4 });
+      add(g, new THREE.SphereGeometry(0.109, 20, 8, Math.PI / 2 - 1.75, 3.5, 1.28, 0.6), ink, 0, 0.35, 0.04, false);
+      for (const s of [-1, 1]) {
+        const e = add(g, new THREE.SphereGeometry(0.02, 12, 8), eye, s * 0.04, 0.36, 0.142, false);
+        e.scale.set(1, 1.15, 0.5);
+      }
+    }
     for (const s of [-1, 1]) {
       add(g, new THREE.ConeGeometry(0.04, 0.08, 8), fur, s * 0.06, 0.45, 0.04);
       add(g, new THREE.ConeGeometry(0.022, 0.045, 8), pink, s * 0.06, 0.445, 0.055);

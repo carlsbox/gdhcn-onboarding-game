@@ -367,7 +367,7 @@ export const MOMENTS: Moment[] = [
         { text: 'The four named contacts (Business Owner, Key Master, Legal, Technical) with official email addresses', required: true },
         { text: 'Private repository URLs for UAT and DEV', required: false, why: 'Testing needs no Letter. Only the PROD repository goes in.' },
         { text: 'SCA, TLS and Upload certificates', required: false, why: 'Certificates live in your GitHub repository, where tng-bot collects them.' },
-        { text: "{country}'s ISO participant code", required: false, why: 'WHO handles the participant code.' },
+        { text: "{country}'s ISO participant code", required: false, why: 'WHO generates the ISO participant codes and matches them itself.' },
         { text: 'The SCA private key', required: false, why: 'Private keys never leave {country}.' },
         { text: 'The GitHub access token, so WHO can log in', required: false, why: 'WHO never needs your GitHub login. The bot is invited instead.' },
         { text: 'Scanned passports of the team', required: false, why: 'Identity is checked face to face or through the diplomatic channel (steps 16–17).' },

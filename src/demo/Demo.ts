@@ -1,7 +1,21 @@
 import type { PlaceId, World } from '../world/World';
 import { setFeedbackContext } from '../ui/feedback';
+import { lang, t } from '../i18n';
 
-const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+const M = (k: string, v?: Record<string, string | number>) => t(`Demo.ts:${k}`, v);
+
+// Playback speed (1 outside the demo). Every demo wait is expressed in 1x milliseconds and
+// is consumed in short slices at the current speed, so a change mid-wait applies at once.
+let speed = 1;
+const wait = (ms: number) => new Promise<void>(r => {
+  let left = ms, last = performance.now();
+  const step = () => {
+    const now = performance.now();
+    left -= (now - last) * speed; last = now;
+    if (left <= 0) r(); else setTimeout(step, Math.min(left / speed, 50));
+  };
+  setTimeout(step, Math.min(ms / speed, 50));
+});
 
 interface Beat {
   title: string;
@@ -23,84 +37,97 @@ interface Beat {
  */
 const BEATS: Beat[] = [
   {
-    title: 'Ask to join', steps: 'Steps 1–8', place: 'home',
-    body: "The Country's Ministry of Health emails a Statement of Interest to the GDHCN Secretariat. WHO checks that the Country is eligible and accepts the Terms of Participation, then invites it to onboard and sends the technical specifications.",
+    title: M('beat1.title'), steps: M('beat1.steps'), place: 'home',
+    body: M('beat1.body'),
     run: async (w, dead) => {
-      await w.travel([['paper', 1]], 'Statement of Interest', 'paper'); if (dead()) return;
-      await w.travel([['paper', -1]], 'Invitation + technical specs', 'paper');
+      await w.travel([['paper', 1]], M('parcel.1a'), 'paper'); if (dead()) return;
+      await w.travel([['paper', -1]], M('parcel.1b'), 'paper');
     },
   },
   {
-    title: 'Name the team, make the keys', steps: 'Step 9', place: 'backend', cast: true,
-    body: "The Country names four people: a Business Owner, a Legal representative, a Technical lead, and a Key Master, who runs the Country's keys. The Key Master creates a Signing CA, a TLS and an Upload certificate for testing, and a separate set for production. The Signing CA's private key goes into an offline vault and never leaves the Country.",
-    run: async w => { await w.travel([['ministry-backend', 1]], 'Key generation', 'key'); },
+    title: M('beat2.title'), steps: M('beat2.steps'), place: 'backend', cast: true,
+    body: M('beat2.body'),
+    run: async w => { await w.travel([['ministry-backend', 1]], M('parcel.2'), 'key'); },
   },
   {
-    title: 'Public keys to GitHub', steps: 'Steps 9–11', place: 'home',
-    body: "Each authorised person creates a GPG key with their official email address. The Technical lead puts the public keys, never the private ones, in private GitHub repositories, and invites WHO's bots: tng-bot-dev for testing, and tng-bot for production. The Key Master signs the release tag from the terminal.",
-    run: async w => { await w.travel([['backend-github', 1]], 'Public keys (PEM) + signed tag', 'key'); },
+    title: M('beat3.title'), steps: M('beat3.steps'), place: 'home',
+    body: M('beat3.body'),
+    run: async w => { await w.travel([['backend-github', 1]], M('parcel.3'), 'key'); },
   },
   {
-    title: 'Send the Letter of Application', steps: 'Steps 12–14', place: 'home',
-    body: "Before production, the Legal representative sends a Letter of Application for each trust domain the Country joins. It names the four contacts, the GPG key fingerprints and the production repository. The certificates themselves stay in the repository for tng-bot to collect.",
-    run: async w => { await w.travel([['paper', 1]], 'Letter of Application', 'paper'); },
+    title: M('beat4.title'), steps: M('beat4.steps'), place: 'home',
+    body: M('beat4.body'),
+    run: async w => { await w.travel([['paper', 1]], M('parcel.4'), 'paper'); },
   },
   {
-    title: 'WHO verifies the people', steps: 'Steps 15–23', place: 'secretariat',
-    body: "WHO confirms the named people face to face, or through the diplomatic channel, and checks that the email inside every GPG key matches the Letter.",
+    title: M('beat5.title'), steps: M('beat5.steps'), place: 'secretariat',
+    body: M('beat5.body'),
     run: async (w, dead) => {
       await wait(1800); if (dead()) return;
       await w.flyTo('home', { dur: 1.1, caption: true }); if (dead()) return;
-      await w.travel([['paper', -1]], 'Identities confirmed', 'paper');
+      await w.travel([['paper', -1]], M('parcel.5'), 'paper');
     },
   },
   {
-    title: 'tng-bot collects the keys', steps: 'Steps 23–46', place: 'github',
-    body: "WHO Operations takes over. tng-bot clones the signed tag, verifies it against the onboarded GPG keys, and collects the public keys. Test keys are signed automatically and whitelisted.",
+    title: M('beat6.title'), steps: M('beat6.steps'), place: 'github',
+    body: M('beat6.body'),
     run: async (w, dead) => {
       await w.botTo('github'); if (dead()) return;
       w.bot.setMood('checking'); await wait(2000); if (dead()) return;
       w.bot.setMood('happy'); await wait(1200); if (dead()) return;
-      await w.travel([['github-ops', 1]], 'Public keys, tag verified', 'key'); if (dead()) return;
+      await w.travel([['github-ops', 1]], M('parcel.6a'), 'key'); if (dead()) return;
       await w.botTo('ops'); w.bot.setMood('idle'); if (dead()) return;
       await w.flyTo('home', { dur: 1.1, caption: true }); if (dead()) return;
-      await w.travel([['ops-uat', 1]], 'UAT keys: auto-signed', 'key');
+      await w.travel([['ops-uat', 1]], M('parcel.6b'), 'key');
     },
   },
   {
-    title: 'WHO signs PROD offline', steps: 'Steps 36–50', place: 'ops',
-    body: "Production keys are verified by WHO, and signed with the WHO Trust Anchor in an air-gapped process. The Trust Anchor's private key never sits on the online gateway.",
+    title: M('beat7.title'), steps: M('beat7.steps'), place: 'ops',
+    body: M('beat7.body'),
     run: async (w, dead) => {
       w.pulseAnchor(); await wait(2200); if (dead()) return;
       await w.flyTo('home', { dur: 1.1, caption: true }); if (dead()) return;
-      await w.travel([['ops-prod', 1]], 'PROD keys: signed offline', 'key');
+      await w.travel([['ops-prod', 1]], M('parcel.7'), 'key');
     },
   },
   {
-    title: 'Test before going live', steps: 'Steps 60–69', place: 'home',
-    body: "The Technical lead connects to a test gateway with the TLS client certificate. Testing can run on DEV, UAT or PROD. The dry run uploads a Document Signer Certificate, revokes one, downloads the trust list and validates samples. When it passes, WHO opens production.",
+    title: M('beat8.title'), steps: M('beat8.steps'), place: 'home',
+    body: M('beat8.body'),
     run: async (w, dead) => {
-      await w.travel([['backend-uat', 1]], 'mTLS · GET /trustList', 'data'); if (dead()) return;
-      await w.travel([['backend-uat', 1]], 'Upload · revoke · download', 'data'); if (dead()) return;
+      await w.travel([['backend-uat', 1]], M('parcel.8a'), 'data'); if (dead()) return;
+      await w.travel([['backend-uat', 1]], M('parcel.8b'), 'data'); if (dead()) return;
       w.setProdOpen(true); w.pulseGateway('prod', '#4fe0a0');
     },
   },
   {
-    title: 'Go live', steps: 'Steps 70–80', place: 'home', prodOpen: true,
-    body: "A Document Signer Certificate, signed by the Signing CA, is packaged, signed with the Upload certificate, uploaded to production and found in the trust list. One is revoked to prove that works, the results go by email, and a confirmation tells the Country and WHO that onboarding is complete. From here, renewing certificates on time is the Country's job.",
+    title: M('beat9.title'), steps: M('beat9.steps'), place: 'home', prodOpen: true,
+    body: M('beat9.body'),
     run: async (w, dead) => {
-      await w.travel([['backend-prod', 1]], 'CMS package (DSC)', 'data'); if (dead()) return;
-      await w.travel([['backend-prod', -1]], 'Trust list: DSC present', 'data'); if (dead()) return;
-      await w.travel([['backend-prod', 1]], 'Revoke one DSC', 'data'); if (dead()) return;
-      await w.travel([['paper', 1]], 'Test results', 'paper'); if (dead()) return;
+      await w.travel([['backend-prod', 1]], M('parcel.9a'), 'data'); if (dead()) return;
+      await w.travel([['backend-prod', -1]], M('parcel.9b'), 'data'); if (dead()) return;
+      await w.travel([['backend-prod', 1]], M('parcel.9c'), 'data'); if (dead()) return;
+      await w.travel([['paper', 1]], M('parcel.9d'), 'paper'); if (dead()) return;
       w.pulseGateway('prod', '#4fe0a0');
-      await w.travel([['paper', -1]], 'Onboarding complete', 'paper'); if (dead()) return;
+      await w.travel([['paper', -1]], M('parcel.9e'), 'paper'); if (dead()) return;
       w.bot.setMood('happy');
     },
   },
 ];
 
 const VOICE_KEY = 'gdhcn-demo-voice';
+const SPEED_KEY = 'gdhcn-demo-speed';
+const SPEEDS = [1, 1.25, 1.5, 2];
+
+/** True when the URL really serves audio (a dev server answers unknown paths with index.html, so check the type). */
+const audioProbe = new Map<string, Promise<boolean>>();
+function audioExists(url: string): Promise<boolean> {
+  if (!audioProbe.has(url)) {
+    audioProbe.set(url, fetch(url, { method: 'HEAD' })
+      .then(r => r.ok && (r.headers.get('content-type') ?? '').startsWith('audio'))
+      .catch(() => false));
+  }
+  return audioProbe.get(url)!;
+}
 
 // Role tiles for beat 2. Cue times (seconds into beat-02.mp3) come from the pauses in Naomi's take,
 // so each tile lights as its role is spoken. Regenerate the clip and these need re-timing.
@@ -110,14 +137,16 @@ const ICON = {
   technical: '<rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/><path d="M10 9l-2 2 2 2"/><path d="M14 9l2 2-2 2"/>',
   keymaster: '<circle cx="8" cy="12" r="4"/><path d="M12 12h9"/><path d="M18 12v3"/><path d="M21 12v2"/>',
 };
-const CAST = [
-  { k: 'business', role: 'Business Owner', duty: 'Owns the use cases', at: 3.1 },
-  { k: 'legal', role: 'Legal representative', duty: "WHO's contact on legal and policy", at: 4.3 },
-  { k: 'technical', role: 'Technical lead', duty: 'Security, infrastructure, conformance', at: 6.8 },
-  { k: 'keymaster', role: 'Key Master', duty: "Runs the Country's keys", at: 8.7 },
-] as const;
-const CAST_CERTS_AT = 13.8;  // "The Key Master creates a Signing CA, a TLS and an Upload certificate..."
-const CAST_VAULT_AT = 20.7;  // "The Signing CA's private key goes into an offline vault..."
+// Cue times per language: the French narration (public/audio/demo/fr/) will need its own once recorded.
+// Until then the French set is a copy of the English one.
+const CUES = {
+  en: { roles: [3.1, 4.3, 6.8, 8.7], certs: 13.8, vault: 20.7 },
+  fr: { roles: [2.5, 4.1, 5.8, 7.4], certs: 10.5, vault: 19.4 }, // from the pauses in Hélène's take of beat-02
+}[lang()];
+const CAST = (['business', 'legal', 'technical', 'keymaster'] as const).map((k, n) => (
+  { k, role: M(`cast.${k}.role`), duty: M(`cast.${k}.duty`), at: CUES.roles[n] }));
+const CAST_CERTS_AT = CUES.certs;  // "The Key Master creates a Signing CA, a TLS and an Upload certificate..."
+const CAST_VAULT_AT = CUES.vault;  // "The Signing CA's private key goes into an offline vault..."
 
 
 export class Demo {
@@ -138,17 +167,18 @@ export class Demo {
     this.el = document.createElement('div');
     this.el.id = 'demo';
     this.el.innerHTML = `
-      <div class="demo-badge glass">DEMO · the ideal path, no mistakes</div>
+      <div class="demo-badge glass">${M('badge')}</div>
       <div class="demo-caption glass"><div class="demo-meta"></div><h2></h2><p></p></div>
       <div class="demo-bar glass">
-        <button data-a="back" title="Previous">⏮</button>
-        <button data-a="play" title="Pause" class="demo-play">⏸</button>
-        <button data-a="next" title="Next">⏭</button>
+        <button data-a="back" title="${M('bar.back')}">⏮</button>
+        <button data-a="play" title="${M('bar.pause')}" class="demo-play">⏸</button>
+        <button data-a="next" title="${M('bar.next')}">⏭</button>
         <div class="demo-dots">${BEATS.map((_, i) => `<button data-i="${i}" title="${BEATS[i].title}"></button>`).join('')}</div>
-        <button data-a="voice" title="Narration on or off" class="demo-voice"></button>
-        <button data-a="exit" title="Leave the demo">✕</button>
+        <select class="demo-speed" aria-label="${M('bar.speed')}" title="${M('bar.speed')}">${SPEEDS.map(v => `<option value="${v}">${v}×</option>`).join('')}</select>
+        <button data-a="voice" title="${M('bar.voice')}" class="demo-voice"></button>
+        <button data-a="exit" title="${M('bar.exit')}">✕</button>
       </div>
-      <button class="demo-tap glass" hidden>🔊 Tap for sound</button>`;
+      <button class="demo-tap glass" hidden>${M('tapForSound')}</button>`;
     root.appendChild(this.el);
     this.el.querySelector('.demo-tap')!.addEventListener('click', () => this.unblock());
     this.el.querySelector('.demo-bar')!.addEventListener('click', e => {
@@ -163,7 +193,28 @@ export class Demo {
       }
     });
     this.renderVoice();
+    let saved = 1;
+    try { saved = Number(sessionStorage.getItem(SPEED_KEY)); } catch { /* default 1x */ }
+    const sel = this.el.querySelector<HTMLSelectElement>('.demo-speed')!;
+    this.setSpeed(SPEEDS.includes(saved) ? saved : 1);
+    sel.value = String(speed);
+    sel.addEventListener('change', () => {
+      this.setSpeed(Number(sel.value));
+      try { sessionStorage.setItem(SPEED_KEY, String(speed)); } catch { /* not fatal */ }
+      sel.blur();
+    });
   }
+
+  /** One time-scale for everything: waits, caption hold, world animation and the narration clip. */
+  private setSpeed(v: number) {
+    speed = v;
+    this.world.timeScale = v;
+    const a = this.audio as HTMLAudioElement & { mozPreservesPitch?: boolean; webkitPreservesPitch?: boolean };
+    a.playbackRate = v;
+    a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true;
+  }
+
+  private resetSpeed() { speed = 1; this.world.timeScale = 1; }
 
   /** Runs the demo; resolves with what the viewer chose at the end. */
   run(): Promise<'play' | 'again' | 'title'> {
@@ -182,7 +233,7 @@ export class Demo {
     this.world.setProdOpen(!!b.prodOpen);
     this.world.mark(b.place === 'home' ? null : b.place);
     const body = b.body;
-    setFeedbackContext({ mode: 'demo', where: `Demo · beat ${i + 1} · ${b.title}`, moment: `beat ${i + 1} · ${b.title}`, steps: b.steps });
+    setFeedbackContext({ mode: 'demo', where: M('feedbackContext', { i: i + 1, title: b.title }), moment: `beat ${i + 1} · ${b.title}`, steps: b.steps });
     this.caption(i, b, body);
     this.narrate(i);
     const started = performance.now();
@@ -193,7 +244,7 @@ export class Demo {
 
     // hold the caption long enough to read (or until Naomi finishes), and while paused
     const readMs = Math.min(11000, Math.max(4500, body.length * 55));
-    while (!dead() && (performance.now() - started < readMs || this.paused || (this.sound && this.speaking))) await wait(200);
+    while (!dead() && ((performance.now() - started) * speed < readMs || this.paused || (this.sound && this.speaking))) await wait(200);
     if (!dead()) await wait(600);
     if (dead()) return;
     if (i < BEATS.length - 1) this.play(i + 1); else this.end();
@@ -208,7 +259,7 @@ export class Demo {
     box.innerHTML = CAST.map(c => `<div class="cast-tile c-${c.k}" data-k="${c.k}">
         <div class="cast-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICON[c.k]}</svg></div>
         <div class="cast-role">${c.role}</div><div class="cast-duty">${c.duty}</div>
-        ${c.k === 'keymaster' ? '<div class="cast-chips"><span class="chip-certs">Signing CA · TLS · Upload<br>for UAT and for PROD</span><span class="chip-vault">🔒 SCA key: offline vault</span></div>' : ''}
+        ${c.k === 'keymaster' ? `<div class="cast-chips"><span class="chip-certs">${M('cast.certsChip')}</span><span class="chip-vault">${M('cast.vaultChip')}</span></div>` : ''}
       </div>`).join('');
     this.el.appendChild(box);
     const tiles = [...box.querySelectorAll<HTMLElement>('.cast-tile')];
@@ -216,7 +267,7 @@ export class Demo {
       if (gen !== this.gen || !box.isConnected) { clearInterval(timer); return; }
       // follow the narration clip when it is running (muted still advances); otherwise the wall clock
       const a = this.audio;
-      const t = a.currentTime > 0 || !a.paused ? a.currentTime : (performance.now() - started) / 1000;
+      const t = a.currentTime > 0 || !a.paused ? a.currentTime : (performance.now() - started) * speed / 1000;
       tiles.forEach((el, n) => {
         const lit = t >= CAST[n].at;
         const isNow = lit && (n === CAST.length - 1 || t < CAST[n + 1].at);
@@ -233,7 +284,7 @@ export class Demo {
   private caption(i: number, b: Beat, body: string) {
     const c = this.el.querySelector('.demo-caption')!;
     c.classList.remove('in'); void (c as HTMLElement).offsetWidth; c.classList.add('in');
-    c.querySelector('.demo-meta')!.innerHTML = `<span>${i + 1} of ${BEATS.length}</span><span class="chip steps">WHO ${b.steps}</span>`;
+    c.querySelector('.demo-meta')!.innerHTML = `<span>${M('meta', { i: i + 1, total: BEATS.length })}</span><span class="chip steps">${M('chipSteps', { steps: b.steps })}</span>`;
     c.querySelector('h2')!.textContent = b.title;
     c.querySelector('p')!.textContent = body;
     this.el.querySelectorAll<HTMLElement>('.demo-dots button').forEach((d, k) => {
@@ -265,8 +316,25 @@ export class Demo {
   /** Play this beat's recorded narration (Higgsfield voice Naomi). */
   private narrate(i: number) {
     this.audio.pause();
-    this.audio.src = `${import.meta.env.BASE_URL}audio/demo/beat-${String(i + 1).padStart(2, '0')}.mp3`;
+    const file = `audio/demo/${lang() === 'fr' ? 'fr/' : ''}beat-${String(i + 1).padStart(2, '0')}.mp3`;
+    if (lang() === 'fr') {
+      // play the French clip only if the file is there, otherwise the beat runs silent
+      this.audio.removeAttribute('src'); this.audio.load();
+      this.speaking = false;
+      const gen = this.gen;
+      audioExists(`${import.meta.env.BASE_URL}${file}`).then(ok => {
+        if (!ok || gen !== this.gen) return;
+        this.audio.src = `${import.meta.env.BASE_URL}${file}`;
+        this.audio.muted = !this.sound;
+        this.audio.playbackRate = speed; // setting src can reset it
+        this.speaking = true;
+        this.audio.play().catch(e => this.blocked(e));
+      });
+      return;
+    }
+    this.audio.src = `${import.meta.env.BASE_URL}${file}`;
     this.audio.muted = !this.sound;
+    this.audio.playbackRate = speed; // setting src can reset it
     this.speaking = true; // until the clip ends or fails to load
     this.audio.play().catch(e => this.blocked(e));
   }
@@ -290,6 +358,7 @@ export class Demo {
 
   private stop() {
     this.gen++;
+    this.resetSpeed();
     this.el.querySelector('.demo-cast')?.remove();
     this.audio.pause();
     this.world.cancelAll();
@@ -298,14 +367,15 @@ export class Demo {
 
   private end() {
     this.gen++;
+    this.resetSpeed();
     this.audio.pause();
     const card = document.createElement('div');
     card.className = 'overlay';
     card.innerHTML = `<div class="title-card glass">
-      <div class="eyebrow">Demo complete</div>
-      <h1>The Country is live</h1>
-      <p class="lede">That is the whole journey on the ideal path. In the game, your team makes each call, and wrong calls come back, sometimes much later.</p>
-      <div class="title-actions"><button class="primary" data-n="play">Play it yourself</button><button class="ghost" data-n="again">Watch again</button><button class="ghost" data-n="title">Back to the start</button></div>
+      <div class="eyebrow">${M('end.eyebrow')}</div>
+      <h1>${M('end.h1')}</h1>
+      <p class="lede">${M('end.lede')}</p>
+      <div class="title-actions"><button class="primary" data-n="play">${M('end.play')}</button><button class="ghost" data-n="again">${M('end.again')}</button><button class="ghost" data-n="title">${M('end.title')}</button></div>
     </div>`;
     this.el.appendChild(card);
     card.addEventListener('click', e => {

@@ -291,6 +291,8 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 }
 .demo-bar > button { border: 0; background: #e4e7f6; width: 40px; height: 40px; border-radius: 12px; cursor: pointer; font-size: 16px; }
 .demo-bar > button:hover { background: #d8dcf3; }
+.demo-speed { height: 40px; border: 0; border-radius: 12px; background: #e4e7f6; color: var(--ink); font: inherit; font-size: 13px; font-weight: 700; padding: 0 2px; cursor: pointer; }
+.demo-speed:hover { background: #d8dcf3; }
 .demo-play { background: var(--ink) !important; color: #fff; }
 .demo-voice.on { background: #dcf6f2 !important; }
 .demo-dots { display: flex; gap: 6px; padding: 0 8px; }
@@ -382,6 +384,10 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 .nav-items { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .nav-btn { border: 0; background: #e9ebf8; border-radius: 10px; padding: 8px 12px; font-weight: 650; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
 .nav-btn:hover { background: #dde1f5; }
+.lang-switch { display: inline-flex; gap: 2px; padding: 3px; background: #e4e7f6; border-radius: 10px; }
+.lang-switch button { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 12.5px; font-weight: 750; letter-spacing: .04em; padding: 5px 9px; border-radius: 8px; cursor: pointer; }
+.lang-switch button[aria-pressed="true"] { background: #fff; color: var(--who); box-shadow: 0 1px 4px rgba(70, 80, 150, .22); }
+.lang-switch button:focus-visible { outline: 2px solid var(--who); outline-offset: 1px; }
 .dev-chip { display: inline-block; font-size: 10.5px; font-weight: 900; letter-spacing: .12em; color: #fff; background: #d9534f; border-radius: 7px; padding: 3px 7px; }
 .menu-toggle { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; padding: 9px 10px; border-radius: 10px; cursor: pointer; font-weight: 650; }
 .menu-toggle:hover { background: #e9ebf8; }
@@ -391,6 +397,12 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
   :root { --nav-h: 50px; }
   .nav-title { display: none; }
   .nav-brand { font-size: 16px; }
+}
+@media (max-width: 520px) {
+  #topnav { gap: 8px; padding: 0 10px; }
+  .nav-items { gap: 5px; }
+  .nav-btn { padding: 7px 8px; font-size: 12.5px; }
+  .lang-switch button { padding: 5px 7px; font-size: 12px; }
 }
 
 /* ---------- dev mode ---------- */

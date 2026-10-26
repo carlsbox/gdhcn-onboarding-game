@@ -1,5 +1,9 @@
-import { MOMENTS, ROLES } from './scenario';
+import { MOMENTS, PHASES, ROLES } from './scenario';
 import type { Moment } from './types';
+import { lang, t } from '../i18n';
+import { en } from '../i18n/en';
+import { localiseMoments, localiseStatic } from '../i18n/overlay';
+import { deName } from '../i18n/typography';
 
 export type Person = 'business' | 'keymaster' | 'legal' | 'technical';
 
@@ -10,7 +14,7 @@ export interface Settings {
 }
 
 export const DEFAULTS: Settings = {
-  country: 'Country XC',
+  country: t('settings.ts:DEFAULTS.country'),
   code: 'XXC',
   names: { business: 'Dr Zawadi Nkosi', keymaster: 'Kwame Mensah', legal: 'Sara Diallo', technical: 'Tendai Banda' },
 };
@@ -21,12 +25,13 @@ let domains: string[] = [...DEFAULT_DOMAINS];
 export const getDomains = () => domains;
 export const setDomains = (d: string[]) => { domains = d.length ? [...d] : [...DEFAULT_DOMAINS]; };
 export const resetDomains = () => { domains = [...DEFAULT_DOMAINS]; };
-const joinList = (d: string[]) => d.length < 2 ? d.join('') : `${d.slice(0, -1).join(', ')} and ${d[d.length - 1]}`;
+export const joinList = (d: string[]) => d.length < 2 ? d.join('') : `${d.slice(0, -1).join(', ')}${t('settings.ts:domains.and')}${d[d.length - 1]}`;
 /** Tokens that change during a run: left alone when the scenario is built, filled as each moment plays. */
 const LIVE = new Set(['domains', 'domainCount', 'domainLetters']);
 
 const KEY = 'gdhcn-game-settings';
-const TEMPLATE: Moment[] = structuredClone(MOMENTS);
+localiseStatic(PHASES, ROLES); // French phase names and role titles, in place
+const TEMPLATE: Moment[] = localiseMoments(structuredClone(MOMENTS)); // French overlay on a clone; English stays the source
 let current: Settings = structuredClone(DEFAULTS);
 
 export function loadSettings(): Settings {
@@ -34,6 +39,8 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const s = JSON.parse(raw) as Partial<Settings>;
+      // a country saved while the other language was on is still the sample country: show this language's name
+      if (s.country === en['settings.ts:DEFAULTS.country'] || s.country === 'Pays XC') s.country = DEFAULTS.country;
       const code = typeof s.code === 'string' && s.code.length === 2 ? alpha3(s.code) : s.code; // older versions stored 2 letters
       return { ...DEFAULTS, ...s, ...(code ? { code } : {}), names: { ...DEFAULTS.names, ...(s.names ?? {}) } };
     }
@@ -123,7 +130,7 @@ export function alpha3(code: string) {
 }
 
 const ascii = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '');
-const parts = (full: string) => full.replace(/^(dr|prof|mr|mrs|ms|hon)\.?\s+/i, '').trim().split(/\s+/);
+const parts = (full: string) => full.replace(/^(?:(?:dr|prof|mr|mrs|ms|hon|pr|mme|mlle)\.?|m\.)\s+/i, '').trim().split(/\s+/);
 const first = (full: string) => parts(full)[0] ?? full;
 const initials = (full: string) => parts(full).slice(0, 2).map(p => p[0] ?? '').join('').toUpperCase();
 
@@ -138,13 +145,15 @@ export function tokens(s: Settings): Record<string, string> {
     business: s.names.business, keymaster: s.names.keymaster, legal: s.names.legal, technical: s.names.technical,
     keymasterFirst: first(s.names.keymaster), legalFirst: first(s.names.legal), technicalFirst: first(s.names.technical),
     keymasterEmail: `${kmLocal}@${domain}`, keymasterPersonal: `${kmLocal}@gmail.com`,
-    domains: joinList(domains), domainCount: String(domains.length), domainLetters: `${domains.length} ${domains.length === 1 ? 'Letter' : 'Letters'}`,
+    domains: joinList(domains), domainCount: String(domains.length), domainLetters: t(domains.length === 1 ? 'settings.ts:letter.one' : 'settings.ts:letter.other', { n: domains.length }),
   };
 }
 
 export function fill(text: string, s: Settings = current, keepLive = false) {
-  const t = tokens(s);
-  return text.replace(/\{(\w+)\}/g, (m, k: string) => (keepLive && LIVE.has(k) ? undefined : t[k]) ?? m);
+  const tk = tokens(s);
+  // French: "de {country}" elides before a vowel (d'Ethiopie)
+  if (lang() === 'fr') text = text.replace(/\b(de|De) \{country\}/g, (_m, d: string) => deName(d, tk.country));
+  return text.replace(/\{(\w+)\}/g, (m, k: string) => (keepLive && LIVE.has(k) ? undefined : tk[k]) ?? m);
 }
 
 /** The words of a moment that mention the run's trust domains, filled with the current choice. */

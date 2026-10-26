@@ -268,6 +268,7 @@ i.g-ok { background: #4fe0a0; } i.g-warn { background: #f2b64a; } i.g-bad { back
 .link { border: 0; background: none; color: var(--who); font-weight: 650; cursor: pointer; padding: 8px 0 0; font-size: 13px; }
 .title-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .title-actions .ghost, .title-actions .primary { margin-top: 14px; }
+.ret-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
 /* ---------- demo ---------- */
 #demo { position: fixed; inset: 0; pointer-events: none; z-index: 15; }

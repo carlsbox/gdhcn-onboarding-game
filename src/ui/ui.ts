@@ -339,7 +339,7 @@ export class UI {
     this.bindCat(el);
   }
 
-  returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<void> {
+  returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<'go' | 'back'> {
     this.openDesk(`<div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This goes back to an earlier call: <b>${opts.origin}</b>. It looked fine at the time.</p>` : ''}
@@ -347,10 +347,13 @@ export class UI {
       ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${T(x)}</li>`).join('')}</ul>` : ''}
       ${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}
       ${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
-      <button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button>
+      <div class="ret-actions"><button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button><button class="ghost back">← Back, undo this</button></div>
       ${catShows() ? `<button class="desk-cat" title="…">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
     this.bindCat(this.deskEl);
-    return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => { this.hideDesk(); done(); }));
+    return new Promise(done => {
+      for (const k of ['go', 'back'] as const)
+        this.deskEl.querySelector(`.${k}`)!.addEventListener('click', () => { this.hideDesk(); done(k); });
+    });
   }
 
   toast(html: string, tone: 'ok' | 'info' | 'bad' = 'ok', ms = 3200) {

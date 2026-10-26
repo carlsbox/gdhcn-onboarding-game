@@ -125,10 +125,15 @@ export class Game {
     if (c.bot) this.world.bot.setMood('error');
     this.days += c.days;
     const why = c.why || opts.extra?.filter(x => x.startsWith('Should not')).join(' ') || c.what;
-    this.detours.push({ index: this.index, title: c.title, steps: c.steps, why, days: c.days, origin: opts.origin });
+    const detour: Detour = { index: this.index, title: c.title, steps: c.steps, why, days: c.days, origin: opts.origin };
+    this.detours.push(detour);
     this.refresh(m);
     if (c.travel) await this.world.flyTo(m.place, { desk: true, dur: 1.1 });
-    await this.ui.returned(c, opts);
+    if (await this.ui.returned(c, opts) === 'back') { // undo: the detour and its days never happened
+      this.detours.splice(this.detours.indexOf(detour), 1);
+      this.days -= c.days;
+      this.refresh(m);
+    }
     if (c.bot) this.world.bot.setMood('idle');
   }
 

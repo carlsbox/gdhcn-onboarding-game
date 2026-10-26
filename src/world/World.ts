@@ -176,7 +176,7 @@ export class World {
     this.ministrySignMesh = min.userData.sign as THREE.Mesh;
     this.place('ministry', 'Ministry of Health', 'People and paperwork: Business Owner, Legal, Technical and Key Master representatives.', -10, -3.6, min, s);
     this.place('backend', 'Country backend', 'Your servers. Private TLS and Upload keys, Document Signers, and the offline SCA vault.', -10, 3.6, backend(), s);
-    this.place('secretariat', 'GDHCN Secretariat', 'gdhcn-support@who.int. Eligibility, Letters of Application and identity checks.', 10, -3.6, secretariat(), s);
+    this.place('secretariat', 'GDHCN Secretariat', 'Governance: gdhcn-secretariat@who.int. Technical help: gdhcn-support@who.int. Eligibility, Letters of Application and identity checks.', 10, -3.6, secretariat(), s);
     const ops = operations();
     this.anchor = ops.anchor;
     this.place('ops', 'WHO Operations', 'tng-bot, pull requests, and the air-gapped room where the WHO Trust Anchor signs PROD keys.', 10, 3.6, ops.group, s);

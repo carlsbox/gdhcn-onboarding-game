@@ -36,7 +36,7 @@ export const MOMENTS: Moment[] = [
     docs: [{ kind: 'letter', title: 'Statement of Interest', lines: ['From: Ministry of Health, {country}', 'To: WHO GDHCN Secretariat', '{country} wishes to join the Global Digital Health Certification Network as a Participant.'] }],
     prompt: 'How do you send it?',
     choices: [
-      { id: 'email', correct: true, text: 'Email it to gdhcn-support@who.int' },
+      { id: 'email', correct: true, text: 'Email it to gdhcn-secretariat@who.int' },
       {
         id: 'gateway', text: 'Upload it to the Trust Network Gateway',
         consequence: {
@@ -51,14 +51,14 @@ export const MOMENTS: Moment[] = [
         consequence: {
           title: 'Nobody is looking there', by: 'WHO Secretariat', steps: 'Step 1',
           what: "No one at WHO watches a repository it hasn't been told about. tng-bot only reads repositories it is invited to, much later in onboarding.",
-          why: 'The Statement of Interest goes to gdhcn-support@who.int.',
+          why: 'The Statement of Interest goes to gdhcn-secretariat@who.int.',
           days: 4, travel: { legs: [['backend-github', 1]], label: 'Statement of Interest', kind: 'paper' },
         },
       },
     ],
     success: { travel: [{ legs: [['paper', 1]], label: 'Statement of Interest', kind: 'paper' }], note: 'Received by the GDHCN Secretariat.' },
     days: 2,
-    learn: 'Onboarding starts with an email: the Statement of Interest goes to gdhcn-support@who.int.',
+    learn: 'Onboarding starts with an email: the Statement of Interest goes to gdhcn-secretariat@who.int.',
   },
   {
     id: 'eligibility', phase: 'A', title: 'Prove you are eligible', steps: 'Steps 2–8', place: 'ministry', role: 'legal', type: 'choice',
@@ -114,7 +114,7 @@ export const MOMENTS: Moment[] = [
     }],
     prompt: 'How do you set the team up for onboarding?',
     choices: [
-      { id: 'four', correct: true, text: 'Name all four, each with an official {domain} email address' },
+      { id: 'four', correct: true, text: 'Name all four, each with an official government email address' },
       {
         id: 'later', text: 'Let the software vendor handle the keys and name the people later',
         consequence: {
@@ -160,7 +160,7 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'certs', phase: 'B', title: 'Create your certificates', steps: 'Step 9', place: 'backend', role: 'keymaster', type: 'choice',
-    brief: "{keymasterFirst} creates {country}'s certificates. Each environment needs a Signing CA (SCA), a TLS client certificate and an Upload certificate.",
+    brief: "{keymasterFirst} creates {country}'s certificates. Each environment needs its own Signing CA (SCA), TLS client certificate and Upload certificate: DEV (optional), UAT and PROD.",
     docs: [
       { kind: 'cert', title: 'SCA · Signing CA', lines: ["{country}'s trust anchor", 'Issues Document Signer Certificates (DSCs)'] },
       { kind: 'cert', title: 'TLS client certificate', lines: ["Proves your backend's identity to the Gateway (mTLS)"] },
@@ -168,19 +168,19 @@ export const MOMENTS: Moment[] = [
     ],
     prompt: 'How many sets do you create?',
     choices: [
-      { id: 'two', correct: true, text: 'One set for UAT and a separate set for PROD' },
-      { id: 'one', flag: 'reuse', text: 'One set, used in both UAT and PROD; less to manage' },
+      { id: 'two', correct: true, text: 'A separate set for each environment: DEV (optional), UAT and PROD' },
+      { id: 'one', flag: 'reuse', text: 'One set, used in DEV, UAT and PROD; less to manage' },
       {
         id: 'tls', text: 'Only the TLS certificate for now; the rest can wait',
         consequence: {
           title: 'Key material incomplete', by: 'WHO Secretariat', steps: 'Steps 9, 14',
-          what: 'The Letter of Application needs your SCA, TLS and Upload certificates.',
+          what: "tng-bot collects your SCA, TLS and Upload certificates from your GitHub repository, and two of them aren't there.",
           why: 'All three are prepared for every environment you onboard to.',
           days: 3,
         },
       },
     ],
-    success: { note: 'Two separate sets: one for UAT, one for PROD.' },
+    success: { note: 'A separate set for each environment, never shared.' },
     days: 3,
     learn: 'Never reuse keys or certificates between production and test environments.',
   },
@@ -293,24 +293,33 @@ export const MOMENTS: Moment[] = [
   },
   {
     id: 'invite', phase: 'B', title: 'Beat the 7-day clock', steps: 'Steps 12–13', place: 'ministry', role: 'business', type: 'choice',
-    brief: 'The bot invitations expire after 7 days. WHO has to accept them in that window, and the Letter of Application still needs signatures.',
+    brief: "The bot invitations expire after 7 days. WHO has to accept them in that window, and it only knows to look if you tell it. The Letter of Application is a separate step and can follow later.",
     docs: [{ kind: 'email', title: 'GitHub · invitations sent', lines: ['tng-bot-dev invited to tng-{code3Lower}-uat', 'tng-bot invited to tng-{code3Lower}-prod', 'Expires in 7 days'], mark: [2] }],
     prompt: 'What do you do?',
     choices: [
-      { id: 'now', correct: true, text: 'Get the Letter signed and to WHO this week' },
+      { id: 'now', correct: true, text: 'Email gdhcn-support@who.int that the bot invitations are waiting, so WHO accepts them this week' },
       {
-        id: 'wait', text: "Hold the Letter for next month's management meeting",
+        id: 'wait', text: "Hold everything until the Letter is signed at next month's management meeting",
         consequence: {
           title: 'Invitations expired', by: 'GitHub', steps: 'Steps 12–13',
-          what: 'The invitations lapsed before WHO could accept them.',
-          why: 'Re-invite tng-bot and tng-bot-dev, restart the 7-day clock, and keep it in step with the Letter.',
+          what: 'The invitations lapsed before WHO accepted them.',
+          why: "The bot invitations don't wait for the Letter. Re-invite tng-bot and tng-bot-dev, then tell WHO straight away.",
+          days: 5,
+        },
+      },
+      {
+        id: 'silent', text: 'Do nothing; WHO watches GitHub and will see them',
+        consequence: {
+          title: 'Invitations expired', by: 'GitHub', steps: 'Steps 12–13',
+          what: 'Nobody at WHO knew the invitations were there, and they lapsed.',
+          why: 'Tell WHO by email when the invitations are ready. Re-invite tng-bot and tng-bot-dev and restart the 7-day clock.',
           days: 5,
         },
       },
     ],
-    success: { note: 'Letter signed in time.' },
+    success: { note: 'WHO told; bot invitations accepted in time.' },
     days: 2,
-    learn: 'Bot invitations expire after 7 days, so time them with the Letter of Application.',
+    learn: "Bot invitations expire after 7 days, so tell WHO they're ready. The Letter of Application can follow later.",
   },
   {
     id: 'letter', phase: 'B', title: 'Assemble the Letter of Application', steps: 'Step 14', place: 'ministry', role: 'legal', type: 'checklist',
@@ -348,7 +357,7 @@ export const MOMENTS: Moment[] = [
     choices: [
       { id: 'f2f', correct: true, text: 'Meet WHO face to face with passports, or confirm through the diplomatic channel' },
       {
-        id: 'scan', text: 'Email scanned passports to gdhcn-support',
+        id: 'scan', text: 'Email scanned passports to the GDHCN Secretariat',
         consequence: {
           title: 'Not an accepted channel', by: 'WHO Secretariat', steps: 'Steps 16–17',
           what: "WHO can't verify identity from an emailed scan.",

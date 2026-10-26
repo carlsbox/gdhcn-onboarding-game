@@ -3,6 +3,7 @@
  * (sadder the more detours a run has taken), wears a crown on a perfect run, and
  * hides three times in the 3D world. Nothing here covers learning content.
  */
+import { t } from '../i18n';
 
 export type CatMood = 'meh' | 'sad' | 'gloomy' | 'crown';
 
@@ -11,14 +12,7 @@ export const catMood = (detours: number): CatMood => (detours >= 5 ? 'gloomy' : 
 /** The cat shows on every set-back. */
 export const catShows = () => true;
 
-const SETBACK_LINES = [
-  'Even the cat knows the SCA private key stays in the vault.',
-  'The cat suggests reading the Letter of Application twice.',
-  "Mrrp. Detours happen. That's what WHO's checks are for.",
-  'The cat has filed this under lessons learned.',
-  'The cat would like to see that tag signed properly.',
-  'The cat is not angry. The cat is disappointed.',
-];
+const SETBACK_LINES = [1, 2, 3, 4, 5, 6].map(n => t(`cat.ts:SETBACK_LINES.${n}`));
 
 export const catLine = () => SETBACK_LINES[Math.floor(Math.random() * SETBACK_LINES.length)];
 
@@ -82,9 +76,9 @@ export function mrrp() {
 
 const FOUND_KEY = 'gdhcn-cats-found';
 export const WORLD_CATS: Record<string, string> = {
-  country: "The Key Master's cat, in disguise. Only steals fish, never private keys.",
-  gateway: 'Asleep on the warm Gateway. Trust lists are very cosy.',
-  who: "The Secretariat's cat. Has read the Administrative and Operational Framework twice.",
+  country: t('cat.ts:WORLD_CATS.country'),
+  gateway: t('cat.ts:WORLD_CATS.gateway'),
+  who: t('cat.ts:WORLD_CATS.who'),
 };
 
 export function catsFound(): string[] {

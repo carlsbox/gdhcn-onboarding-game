@@ -1,4 +1,7 @@
 import { settings } from '../game/settings';
+import { t, tEn } from '../i18n';
+
+const F = (k: string, v?: Record<string, string | number>) => t(`feedback.ts:${k}`, v);
 
 /**
  * Reviewer feedback: a 💬 button on every screen that sends a comment, plus where the
@@ -18,36 +21,37 @@ export interface FeedbackContext {
 
 const URL_ = (import.meta.env.VITE_FEEDBACK_URL as string | undefined) ?? '';
 const WHO_KEY = 'gdhcn-feedback-who';
-let ctx: FeedbackContext = { mode: 'title', where: 'Title screen' };
+let ctx: FeedbackContext = { mode: 'title', where: F('ctx.titleScreen') };
 
 export function setFeedbackContext(c: FeedbackContext) { ctx = c; }
 
-const TYPES = ['Accuracy (does not match WHO guidance)', 'Unclear or confusing', 'Bug or display problem', 'Idea or suggestion', 'Works well'];
+// the value sent to the review sheet stays English whatever the display language
+const TYPES = [1, 2, 3, 4, 5].map(n => ({ value: tEn(`feedback.ts:TYPES.${n}`), label: F(`TYPES.${n}`) }));
 
 export function mountFeedback(root: HTMLElement) {
   const btn = document.createElement('button');
   btn.id = 'fb-btn';
   btn.className = 'glass';
-  btn.title = 'Send feedback on this screen';
-  btn.innerHTML = '💬 <span>Feedback</span>';
+  btn.title = F('button.title');
+  btn.innerHTML = `💬 <span>${F('button.label').replace(/^💬\s*/u, '')}</span>`;
   root.appendChild(btn);
 
   const panel = document.createElement('div');
   panel.id = 'fb-panel';
   panel.className = 'glass';
   panel.innerHTML = `
-    <div class="fb-head"><b>Send feedback</b><button class="fb-x" aria-label="Close">✕</button></div>
+    <div class="fb-head"><b>${F('panel.head')}</b><button class="fb-x" aria-label="${F('panel.closeAria')}">✕</button></div>
     <div class="fb-where"></div>
-    <label>What kind?<select name="type">${TYPES.map(t => `<option>${t}</option>`).join('')}</select></label>
-    <label>Your comment<textarea name="comment" rows="5" maxlength="4000" placeholder="What did you notice? Quote the wording if it's about the text."></textarea></label>
+    <label>${F('kind.label')}<select name="type">${TYPES.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}</select></label>
+    <label>${F('comment.label')}<textarea name="comment" rows="5" maxlength="4000" placeholder="${F('comment.placeholder')}"></textarea></label>
     <div class="fb-row">
-      <label>Name<input name="name" maxlength="200" autocomplete="name"></label>
-      <label>Organisation<input name="org" maxlength="200" autocomplete="organization"></label>
+      <label>${F('name.label')}<input name="name" maxlength="200" autocomplete="name"></label>
+      <label>${F('org.label')}<input name="org" maxlength="200" autocomplete="organization"></label>
     </div>
-    <label>Email (optional, if you'd like a reply)<input name="email" type="email" maxlength="200" autocomplete="email"></label>
+    <label>${F('email.label')}<input name="email" type="email" maxlength="200" autocomplete="email"></label>
     <input name="website" class="fb-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-    <div class="fb-actions"><button class="primary fb-send">Send</button><span class="fb-status"></span></div>
-    <p class="fb-fine">Comments go to the OS Forge review sheet with the screen you were on. Name and email are optional.</p>`;
+    <div class="fb-actions"><button class="primary fb-send">${F('send')}</button><span class="fb-status"></span></div>
+    <p class="fb-fine">${F('fine')}</p>`;
   root.appendChild(panel);
 
   const $ = <T extends HTMLElement>(q: string) => panel.querySelector(q) as T;
@@ -61,8 +65,8 @@ export function mountFeedback(root: HTMLElement) {
   } catch { /* fine */ }
 
   const open = () => {
-    $('.fb-where').textContent = `About: ${ctx.where ?? ctx.mode}${ctx.steps ? ` (WHO ${ctx.steps})` : ''}`;
-    status.textContent = URL_ ? '' : 'Feedback is not connected on this copy of the game.';
+    $('.fb-where').textContent = `${F('panel.where', { where: ctx.where ?? ctx.mode })}${ctx.steps ? ` ${F('panel.whereSteps', { steps: ctx.steps })}` : ''}`;
+    status.textContent = URL_ ? '' : F('status.notConnected');
     $<HTMLButtonElement>('.fb-send').disabled = !URL_;
     panel.classList.add('open');
     field('comment').focus();
@@ -73,7 +77,7 @@ export function mountFeedback(root: HTMLElement) {
 
   $('.fb-send').addEventListener('click', async () => {
     const comment = field('comment').value.trim();
-    if (!comment) { status.textContent = 'Please write a comment first.'; field('comment').focus(); return; }
+    if (!comment) { status.textContent = F('status.empty'); field('comment').focus(); return; }
     const payload = {
       type: (panel.querySelector('select') as HTMLSelectElement).value,
       comment,
@@ -87,17 +91,17 @@ export function mountFeedback(root: HTMLElement) {
     try { localStorage.setItem(WHO_KEY, JSON.stringify({ name: payload.name, org: payload.org, email: payload.email })); } catch { /* fine */ }
     const send = $<HTMLButtonElement>('.fb-send');
     send.disabled = true;
-    status.textContent = 'Sending…';
+    status.textContent = F('status.sending');
     try {
       // text/plain keeps this a "simple" request, so the browser skips the CORS preflight Apps Script can't answer
       const res = await fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
       const out = await res.json().catch(() => ({ ok: res.ok }));
       if (!out.ok) throw new Error(out.error ?? 'not saved');
       field('comment').value = '';
-      status.textContent = 'Thank you, your comment was saved.';
+      status.textContent = F('status.saved');
       setTimeout(close, 1600);
     } catch {
-      status.textContent = "Couldn't send. Check your connection and try again; your comment is still here.";
+      status.textContent = F('status.failed');
     } finally {
       send.disabled = false;
     }

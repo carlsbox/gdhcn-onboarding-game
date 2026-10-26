@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { t } from '../i18n';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
@@ -168,37 +169,37 @@ export class World {
     add(gh, new RoundedBoxGeometry(7, 0.9, 4.4, 6, 0.42), std(C.base), 0, -0.35, 0);
     add(gh, new RoundedBoxGeometry(6.7, 0.2, 4.1, 4, 0.09), std('#dfe2f4'), 0, 0.12, 0);
 
-    this.countryLabel = this.label(s, 'COUNTRY XC', -10, 0, -9.6, 'w-territory t-country');
-    this.label(s, 'TRUST NETWORK GATEWAY', 0, 0, -8.4, 'w-territory t-network');
-    this.label(s, 'WHO', 10, 0, -9.6, 'w-territory t-who');
-    tipLabel(this.label(s, 'GITHUB · third party', 0, 0.4, 13.7, 'w-territory t-github'));
+    this.countryLabel = this.label(s, t('World.ts:territory.country'), -10, 0, -9.6, 'w-territory t-country');
+    this.label(s, t('World.ts:territory.network'), 0, 0, -8.4, 'w-territory t-network');
+    this.label(s, t('World.ts:territory.who'), 10, 0, -9.6, 'w-territory t-who');
+    tipLabel(this.label(s, t('World.ts:territory.github'), 0, 0.4, 13.7, 'w-territory t-github'));
     // WHO-run certificate expiry dashboard (Grafana, one per environment), on its own island south of WHO
     const dash = new THREE.Group(); dash.position.set(10, 0, 11); s.add(dash);
     add(dash, new RoundedBoxGeometry(5.6, 0.9, 4.4, 6, 0.42), std(C.base), 0, -0.35, 0);
     add(dash, new RoundedBoxGeometry(5.3, 0.2, 4.1, 4, 0.09), std('#dfe2f4'), 0, 0.12, 0);
-    this.label(s, 'EXPIRY DASHBOARD · WHO', 10, 0.4, 13.7, 'w-territory t-who');
+    this.label(s, t('World.ts:territory.dashboard'), 10, 0.4, 13.7, 'w-territory t-who');
 
     for (const [x, z] of [[-10, -3.6], [-10, 3.6], [10, -3.6], [10, 3.6]]) plot(s, x, z, 6.6, 5.2);
 
     const min = ministry();
     this.ministrySignMesh = min.userData.sign as THREE.Mesh;
-    this.place('ministry', 'Ministry of Health', 'People and paperwork: Business Owner, Legal, Technical and Key Master representatives.', -10, -3.6, min, s);
-    this.place('backend', 'Country backend', 'Your servers. Private TLS and Upload keys, Document Signers, and the offline SCA vault.', -10, 3.6, backend(), s);
-    this.place('secretariat', 'GDHCN Secretariat', 'Governance: gdhcn-secretariat@who.int. Technical help: gdhcn-support@who.int. Eligibility, Letters of Application and identity checks.', 10, -3.6, secretariat(), s);
+    this.place('ministry', t('World.ts:place.ministry.name'), t('World.ts:place.ministry.blurb'), -10, -3.6, min, s);
+    this.place('backend', t('World.ts:place.backend.name'), t('World.ts:place.backend.blurb'), -10, 3.6, backend(), s);
+    this.place('secretariat', t('World.ts:place.secretariat.name'), t('World.ts:place.secretariat.blurb'), 10, -3.6, secretariat(), s);
     const ops = operations();
     this.anchor = ops.anchor;
-    this.place('ops', 'WHO Operations', 'tng-bot, pull requests, and the air-gapped room where the WHO Trust Anchor signs PROD keys.', 10, 3.6, ops.group, s);
+    this.place('ops', t('World.ts:place.ops.name'), t('World.ts:place.ops.blurb'), 10, 3.6, ops.group, s);
     const uat = gateway(0.8, '#8ff6ff');
-    this.place('uat', 'UAT gateway', 'The test gateway. Keys are auto-signed. Connectivity and dry-run tests happen here.', 0, -3.0, uat.group, s);
+    this.place('uat', t('World.ts:place.uat.name'), t('World.ts:place.uat.blurb'), 0, -3.0, uat.group, s);
     const prod = gateway(1.0, '#8ff6ff');
-    this.place('prod', 'PROD gateway', 'The production gateway. Holds whitelisted public keys and publishes trust lists.', 0, 3.0, prod.group, s);
+    this.place('prod', t('World.ts:place.prod.name'), t('World.ts:place.prod.blurb'), 0, 3.0, prod.group, s);
     this.badges.push(uat.badge, prod.badge);
     this.gatewayRings.push(uat.ring, prod.ring);
-    this.place('dashboard', 'Certificate expiry dashboard', 'WHO-run dashboards (DEV, UAT, PROD) showing when each participant\'s certificates expire. A view, not a reminder service.', 10, 11, dashboard(), s);
-    this.place('github', 'Private repos', "Country XC's private repositories (UAT, PROD). Public keys only.", 0, 11, repos(), s);
+    this.place('dashboard', t('World.ts:place.dashboard.name'), t('World.ts:place.dashboard.blurb'), 10, 11, dashboard(), s);
+    this.place('github', t('World.ts:place.github.name'), t('World.ts:place.github.blurb', { country: t('settings.ts:DEFAULTS.country') }), 0, 11, repos(), s);
 
-    this.label(s, 'Offline SCA vault', -7.9, 2.6, 3.7, 'w-sub');
-    this.label(s, 'Air-gapped signing', 11.3, 2.8, 3.6, 'w-sub');
+    this.label(s, t('World.ts:sub.vault'), -7.9, 2.6, 3.7, 'w-sub');
+    this.label(s, t('World.ts:sub.airgap'), 11.3, 2.8, 3.6, 'w-sub');
 
     tree(s, -13.5, -6.5, 0.9); tree(s, -13.6, 6.6, 1.0); tree(s, 13.6, -6.6, 1.0); tree(s, 13.5, 6.5, 0.9);
     tree(s, -6.3, 0.2, 0.8); tree(s, 6.3, -0.2, 0.8);
@@ -356,7 +357,7 @@ export class World {
     mat.map?.dispose();
     mat.map = ministrySign(code.toUpperCase());
     mat.needsUpdate = true;
-    this.places.github.blurb = `${country}'s private repositories (UAT, PROD). Public keys only.`;
+    this.places.github.blurb = t('World.ts:place.github.blurb', { country });
   }
 
   /** Stop every parcel, flight and camera move now (used when the demo skips). */

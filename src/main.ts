@@ -11,6 +11,11 @@ import { UseCasesPage } from './usecases/page';
 import { WORLD_CATS, findCat, mrrp } from './ui/cat';
 import { explore } from './ui/explore';
 import { mountTooltips } from './ui/tooltip';
+import { applyHtmlLang, t } from './i18n';
+
+applyHtmlLang();
+document.title = t('index.html:title');
+document.querySelector('meta[name="description"]')?.setAttribute('content', t('index.html:metaDescription'));
 
 const app = document.getElementById('app')!;
 const world = new World(app);
@@ -26,7 +31,7 @@ addEventListener('reset-view', () => world.resetView());
 world.onCatClick = id => {
   mrrp();
   const n = findCat(id);
-  ui.toast(`🐾 <b>Cat ${n} of 3 found.</b><br>${WORLD_CATS[id]}`, 'info', 5200);
+  ui.toast(`<b>${t('main.ts:catToast', { n })}</b><br>${WORLD_CATS[id]}`, 'info', 5200);
 };
 
 world.onPlaceClick = id => {
@@ -41,7 +46,7 @@ function use(s: Settings) {
 
 async function demo() {
   world.reset();
-  world.setNames('The Country', ''); // the demo is generic so the recorded narration always fits
+  world.setNames(t('main.ts:demoCountryName'), ''); // the demo is generic so the recorded narration always fits
   const next = await new Demo(world, app).run();
   if (next === 'again') return demo();
   location.hash = next === 'play' ? 'phase=A' : '';

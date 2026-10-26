@@ -1,4 +1,7 @@
 import { USE_CASES, type UseCase } from './data';
+import { lang, t } from '../i18n';
+
+const P = (k: string, v?: Record<string, string | number>) => t(`page.ts:${k}`, v);
 
 const asset = (p: string) => `${import.meta.env.BASE_URL}${p}`;
 
@@ -56,8 +59,13 @@ export class UseCasesPage {
 
   private stopVideo() { this.el.querySelector('video')?.pause(); }
 
+  /** Film language: the viewer's per-film choice for this session, else the site language. */
   private getLang(): 'en' | 'fr' {
-    try { return sessionStorage.getItem('uc-lang') === 'fr' ? 'fr' : 'en'; } catch { return 'en'; }
+    try {
+      const v = sessionStorage.getItem('uc-lang');
+      if (v === 'fr' || v === 'en') return v;
+    } catch { /* fall through to the site language */ }
+    return lang();
   }
 
   /** Switch the film language: swap src and poster, pause, back to the start. */
@@ -78,12 +86,12 @@ export class UseCasesPage {
 
   private gallery() {
     return `<div class="uc-card glass">
-      <div class="uc-top"><div class="eyebrow">Use cases</div><button class="uc-x" data-a="close" aria-label="Close">✕</button></div>
-      <h1>The network in people's lives</h1>
-      <p class="lede">Two short animated films follow people whose health records cross a border between two fictional countries, Nordavia and Coralia. Each one shows what the Global Digital Health Certification Network does, and what it never does.</p>
+      <div class="uc-top"><div class="eyebrow">${P('gallery.eyebrow')}</div><button class="uc-x" data-a="close" aria-label="${P('closeAria')}">✕</button></div>
+      <h1>${P('gallery.h1')}</h1>
+      <p class="lede">${P('gallery.lede')}</p>
       <div class="uc-grid">${USE_CASES.map(u => `
         <button class="uc-tile" data-uc="${u.id}">
-          <span class="uc-thumb" style="background-image:url('${asset(u.poster)}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
+          <span class="uc-thumb" style="background-image:url('${asset(lang() === 'fr' ? u.posterFr ?? u.poster : u.poster)}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
           <span class="uc-tag">${u.tag}</span>
           <b>${u.title}</b>
           <span class="uc-sub">${u.subtitle}</span>
@@ -93,31 +101,31 @@ export class UseCasesPage {
 
   private detail(u: UseCase) {
     const others = USE_CASES.filter(o => o.id !== u.id);
-    const lang = u.videoFr ? this.getLang() : 'en';
-    const src = lang === 'fr' && u.videoFr ? u.videoFr : u.video;
-    const langSwitch = u.videoFr ? `<div class="uc-lang" role="group" aria-label="Film language">
-        <button type="button" data-lang="en" aria-pressed="${lang === 'en'}">English</button>
-        <button type="button" data-lang="fr" aria-pressed="${lang === 'fr'}" lang="fr">Français</button>
+    const film = u.videoFr ? this.getLang() : 'en';
+    const src = film === 'fr' && u.videoFr ? u.videoFr : u.video;
+    const langSwitch = u.videoFr ? `<div class="uc-lang" role="group" aria-label="${P('detail.filmLanguage')}">
+        <button type="button" data-lang="en" aria-pressed="${film === 'en'}" lang="en">${P('detail.langEn')}</button>
+        <button type="button" data-lang="fr" aria-pressed="${film === 'fr'}" lang="fr">${P('detail.langFr')}</button>
       </div>` : '';
     return `<div class="uc-card glass">
-      <div class="uc-top"><button class="nav-btn" data-a="gallery">← All use cases</button><button class="uc-x" data-a="close" aria-label="Close">✕</button></div>
+      <div class="uc-top"><button class="nav-btn" data-a="gallery">${P('detail.back')}</button><button class="uc-x" data-a="close" aria-label="${P('closeAria')}">✕</button></div>
       <div class="uc-tag">${u.tag}</div>
       <h1>${u.title}</h1>
       <p class="uc-sub big">${u.subtitle}</p>
       ${langSwitch}
-      <video class="uc-video" controls playsinline preload="metadata" poster="${asset(lang === 'fr' ? u.posterFr ?? u.poster : u.poster)}" src="${asset(src)}"></video>
+      <video class="uc-video" controls playsinline preload="metadata" poster="${asset(film === 'fr' ? u.posterFr ?? u.poster : u.poster)}" src="${asset(src)}"></video>
       <blockquote class="uc-idea">${u.idea}</blockquote>
-      <h3>What the film shows</h3>
+      <h3>${P('detail.whatFilm')}</h3>
       <p>${u.summary}</p>
-      <h3>How the GDHCN helps here</h3>
+      <h3>${P('detail.howHelps')}</h3>
       <ul class="uc-how">${u.how.map(h => `<li>${h}</li>`).join('')}</ul>
-      <h3>Why this use case</h3>
+      <h3>${P('detail.why')}</h3>
       <p>${u.why}</p>
       <div class="title-actions">
-        <button class="primary" data-a="play">Play the onboarding game</button>
-        ${others.map(o => `<button class="ghost" data-uc="${o.id}">Next: ${o.title} →</button>`).join('')}
+        <button class="primary" data-a="play">${P('detail.play')}</button>
+        ${others.map(o => `<button class="ghost" data-uc="${o.id}">${P('detail.next', { title: o.title })}</button>`).join('')}
       </div>
-      <p class="fine">Nordavia and Coralia are fictional. The films are illustrations; the WHO SMART Trust guide is the authority on how the network works.</p>
+      <p class="fine">${P('detail.fine')}</p>
     </div>`;
   }
 }

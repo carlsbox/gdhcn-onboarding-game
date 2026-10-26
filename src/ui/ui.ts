@@ -1,10 +1,16 @@
 import { MOMENTS, PHASES, ROLES } from '../game/scenario';
 import type { ChecklistItem, Consequence, Doc, Moment, Phase } from '../game/types';
-import { DEFAULTS, deriveCode, settings, type Person, type Settings } from '../game/settings';
+import { DEFAULTS, deriveCode, joinList, settings, type Person, type Settings } from '../game/settings';
 import { devOn, devUnlocked, jumpTo, setDevOn } from './dev';
 import { catLine, catMood, catShows, catsFound, catSvg, mrrp } from './cat';
 import { USE_CASES } from '../usecases/data';
 import { renderTips as T, stripTips } from '../game/glossary';
+import { lang, num, setLang, t } from '../i18n';
+
+/** "⌂ Home" -> glyph, then the word in a span (the span is hidden on phones). */
+const glyphLabel = (s: string) => { const [g, ...w] = s.split(' '); return w.length ? `${g} <span>${w.join(' ')}</span>` : `<span>${s}</span>`; };
+
+const U = (k: string, v?: Record<string, string | number>) => t(`ui.ts:${k}`, v);
 
 const h = (html: string) => {
   const t = document.createElement('template');
@@ -33,15 +39,15 @@ export class UI {
   constructor(private root: HTMLElement) {
     this.hudEl = this.mount('<div id="hud" class="glass hidden"></div>');
     this.statsEl = this.mount(`<div id="stats" class="glass hidden">
-      <div class="stat"><span class="stat-n" id="days">0</span><span class="stat-l">game days</span></div>
-      <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">detours</span></div>
-      <button id="reset-view" title="Reset the view">⟲</button></div>`);
+      <div class="stat"><span class="stat-n" id="days">0</span><span class="stat-l">${U('stats.days')}</span></div>
+      <div class="stat"><span class="stat-n bad" id="detours">0</span><span class="stat-l">${U('stats.detours')}</span></div>
+      <button id="reset-view" title="${U('stats.resetView')}">⟲</button></div>`);
     this.statsEl.querySelector('#reset-view')!.addEventListener('click', () => dispatchEvent(new CustomEvent('reset-view')));
     // progress strip: Home on the left, the subway route, Restart on the right
     this.stripEl = this.mount(`<div id="strip" class="glass hidden">
-      <button class="strip-btn" data-leave="home" title="Back to the title screen">⌂ <span>Home</span></button>
+      <button class="strip-btn" data-leave="home" title="${U('strip.homeTitle')}">${glyphLabel(U('strip.home'))}</button>
       <div class="strip-route"></div>
-      <button class="strip-btn" data-leave="restart" title="Restart onboarding from the first step">↺ <span>Restart</span></button></div>`);
+      <button class="strip-btn" data-leave="restart" title="${U('strip.restartTitle')}">${glyphLabel(U('strip.restart'))}</button></div>`);
     this.routeEl = this.stripEl.querySelector('.strip-route')!;
     this.stripEl.querySelectorAll<HTMLElement>('[data-leave]').forEach(b =>
       b.addEventListener('click', async () => {
@@ -52,20 +58,24 @@ export class UI {
     this.toastEl = this.mount('<div id="toast" class="glass"></div>');
     // top bar: brand on the left, menu items on the right (more items can be added to .nav-items)
     this.mount(`<nav id="topnav" class="glass">
-      <a class="nav-brand" href="${import.meta.env.BASE_URL}" data-go="home" title="Back to the start">GDHCN</a>
-      <span class="nav-title">Join the Network</span>
+      <a class="nav-brand" href="${import.meta.env.BASE_URL}" data-go="home" title="${U('navBrandTitle')}">${U('navBrand')}</a>
+      <span class="nav-title">${U('navTitle')}</span>
       <div class="nav-items">
-        ${devOn() ? '<span class="dev-chip">DEV</span><button class="nav-btn" data-go="end" title="Jump to the end (dev)">⏭ End</button>' : ''}
-        <button class="nav-btn" data-go="usecases">▶ Use cases</button>
-        <button class="nav-btn" id="settings-btn" aria-haspopup="true">⚙ Settings</button>
+        ${devOn() ? `<span class="dev-chip">${U('dev.chip')}</span><button class="nav-btn" data-go="end" title="${U('dev.endTitle')}">${U('dev.end')}</button>` : ''}
+        <button class="nav-btn" data-go="usecases">${U('navUseCases')}</button>
+        <button class="nav-btn" id="settings-btn" aria-haspopup="true">${U('navSettings')}</button>
+        <div class="lang-switch" role="group" aria-label="${U('navLang')}">
+          <button type="button" data-lang="en" lang="en" aria-pressed="${lang() === 'en'}">EN</button>
+          <button type="button" data-lang="fr" lang="fr" aria-pressed="${lang() === 'fr'}">FR</button>
+        </div>
       </div></nav>`);
     this.menuEl = this.mount(`<div id="menu" class="glass">
-      <button data-go="restart">Restart from the beginning</button>
-      <div class="menu-l">Jump to a phase (facilitator)</div>
-      ${PHASE_ORDER.map(p => `<button data-go="${p}">${p} · ${PHASES[p]}</button>`).join('')}
-      <button data-go="about">About this simulation</button>
-      ${devUnlocked() ? `<div class="menu-l">Reviewer tools</div>
-      <label class="menu-toggle"><input type="checkbox" id="dev-toggle" ${devOn() ? 'checked' : ''}> Dev mode <span>clickable strip stops, previews, jump to end</span></label>` : ''}
+      <button data-go="restart">${U('menu.restart')}</button>
+      <div class="menu-l">${U('menu.jumpLabel')}</div>
+      ${PHASE_ORDER.map(p => `<button data-go="${p}">${U('menu.phaseButton', { p, name: PHASES[p] })}</button>`).join('')}
+      <button data-go="about">${U('menu.about')}</button>
+      ${devUnlocked() ? `<div class="menu-l">${U('dev.reviewerTools')}</div>
+      <label class="menu-toggle"><input type="checkbox" id="dev-toggle" ${devOn() ? 'checked' : ''}> ${U('dev.toggle')} <span>${U('dev.toggleHint')}</span></label>` : ''}
       </div>`);
     document.getElementById('settings-btn')!.addEventListener('click', () => this.menuEl.classList.toggle('open'));
     document.getElementById('dev-toggle')?.addEventListener('change', e => { setDevOn((e.target as HTMLInputElement).checked); location.reload(); });
@@ -80,8 +90,10 @@ export class UI {
     };
     this.menuEl.addEventListener('click', e => { const t = (e.target as HTMLElement).dataset.go; if (t) go(t); });
     document.getElementById('topnav')!.addEventListener('click', e => {
-      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-go]')?.dataset.go;
-      if (t) { e.preventDefault(); go(t); }
+      const l = (e.target as HTMLElement).closest<HTMLElement>('[data-lang]')?.dataset.lang;
+      if (l) { if (l !== lang()) setLang(l === 'fr' ? 'fr' : 'en'); return; }
+      const g = (e.target as HTMLElement).closest<HTMLElement>('[data-go]')?.dataset.go;
+      if (g) { e.preventDefault(); go(g); }
     });
   }
 
@@ -94,41 +106,41 @@ export class UI {
     const el = this.mount(`<div id="title" class="overlay">
       <div class="title-wrap">
       <div class="title-card glass">
-        <div class="eyebrow">WHO Global Digital Health Certification Network</div>
-        <h1>Join the Network</h1>
-        <p class="lede">Take your country from a first email to live on the production Trust Network Gateway, the way the WHO SMART Trust guidance sets it out.</p>
+        <div class="eyebrow">${U('title.eyebrow')}</div>
+        <h1>${U('title.h1')}</h1>
+        <p class="lede">${U('title.lede')}</p>
         <div class="setup">
-          <label class="f-country">Your country<input id="s-country" maxlength="32" autocomplete="off"></label>
-          <label class="f-code">3-letter code<input id="s-code" maxlength="3" autocomplete="off"></label>
+          <label class="f-country">${U('title.countryLabel')}<input id="s-country" maxlength="32" autocomplete="off"></label>
+          <label class="f-code">${U('title.codeLabel')}<input id="s-code" maxlength="3" autocomplete="off"></label>
         </div>
-        <p class="code-hint">ISO 3166 alpha-3 where one exists. Used in your repository names.</p>
-        <details class="adv"><summary>Your team: who does what</summary>
+        <p class="code-hint">${U('title.codeHint')}</p>
+        <details class="adv"><summary>${U('title.advancedSummary')}</summary>
           <div class="team">
-            ${([['business', 'BO'], ['keymaster', 'KM'], ['legal', 'LG'], ['technical', 'TC']] as const).map(([r, ini]) =>
-              `<label><span class="avatar r-${r}">${ini}</span>${ROLES[r].title}<input data-p="${r}"><span class="job">${ROLES[r].job}</span></label>`).join('')}
+            ${([['business', 'Business', 'BO'], ['keymaster', 'Keymaster', 'KM'], ['legal', 'Legal', 'LG'], ['technical', 'Technical', 'TC']] as const).map(([r, K]) =>
+              `<label><span class="avatar r-${r}">${U(`title.avatar${K}`)}</span>${U(`title.team${K}`)}<input data-p="${r}"><span class="job">${ROLES[r].job}</span></label>`).join('')}
           </div>
-          <button class="link reset" type="button">Reset to the sample country (Country XC)</button>
+          <button class="link reset" type="button">${U('title.resetSample')}</button>
         </details>
         <div class="title-grid">
-          <div><span class="dot c-country"></span><b class="t-cname"></b><br>your ministry, your servers, your private keys</div>
-          <div><span class="dot c-network"></span><b>Trust Network Gateway</b><br>public keys and trust lists</div>
-          <div><span class="dot c-who"></span><b>WHO</b><br>Secretariat, Operations, the offline Trust Anchor</div>
-          <div><span class="dot c-github"></span><b>GitHub</b><br>where your public keys wait for tng-bot</div>
+          <div><span class="dot c-country"></span><b class="t-cname"></b><br>${U('title.gridCountry')}</div>
+          <div><span class="dot c-network"></span><b>${U('title.gridNetworkName')}</b><br>${U('title.gridNetwork')}</div>
+          <div><span class="dot c-who"></span><b>${U('title.gridWhoName')}</b><br>${U('title.gridWho')}</div>
+          <div><span class="dot c-github"></span><b>${U('title.gridGithubName')}</b><br>${U('title.gridGithub')}</div>
         </div>
-        <p class="small">Each moment asks your team to make a call. Wrong calls send things back, sometimes much later. Roads matter: <span class="paper">paper travels by email</span>, <span class="data">keys travel by data</span>.</p>
-        <div class="title-actions"><button class="primary" id="start">Start onboarding</button><button class="ghost" id="watch-demo">▶ Watch the demo</button><button class="ghost" id="explore-btn">🧭 Explore the world</button></div>
-        <p class="fine">Based on WHO SMART Trust (smart.who.int/trust). The sample country and people are fictional. Game days are illustrative, not WHO timelines.</p>
+        <p class="small">${U('title.smallLead')} <span class="paper">${U('title.smallPaper')}</span>, <span class="data">${U('title.smallData')}</span>.</p>
+        <div class="title-actions"><button class="primary" id="start">${U('title.start')}</button><button class="ghost" id="watch-demo">${U('title.watchDemo')}</button><button class="ghost" id="explore-btn">${U('title.explore')}</button></div>
+        <p class="fine">${U('title.fine')}</p>
       </div>
       <aside class="title-side glass">
-        <div class="eyebrow">See it in action</div>
-        <p class="side-lede">Short films showing what onboarding involves and what the network does once a country is live.</p>
+        <div class="eyebrow">${U('title.sideEyebrow')}</div>
+        <p class="side-lede">${U('title.sideLede')}</p>
         <button class="side-tile" id="side-demo">
-          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">3 min</span></span>
-          <span class="side-text"><span class="uc-tag">Narrated demo · this game</span><b>How onboarding works</b><span class="uc-sub">The ideal path from first email to go-live, in nine steps</span></span>
+          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">${U('title.sideDemoLength')}</span></span>
+          <span class="side-text"><span class="uc-tag">${U('title.sideDemoTag')}</span><b>${U('title.sideDemoTitle')}</b><span class="uc-sub">${U('title.sideDemoSub')}</span></span>
         </button>
-        <a class="side-dl" href="${import.meta.env.BASE_URL}video/join-the-network-demo-en.mp4" download>⬇ Download the narrated demo as MP4 (6 MB)</a>
+        ${lang() === 'en' ? `<a class="side-dl" href="${import.meta.env.BASE_URL}video/join-the-network-demo-en.mp4" download>${U('title.sideDownload')}</a>` : ''}
         ${USE_CASES.map(u => `<button class="side-tile" data-uc="${u.id}">
-          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}${u.poster}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
+          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}${lang() === 'fr' ? u.posterFr ?? u.poster : u.poster}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
           <span class="side-text"><span class="uc-tag">${u.tag}</span><b>${u.title}</b><span class="uc-sub">${u.subtitle}</span></span>
         </button>`).join('')}
       </aside>
@@ -145,7 +157,7 @@ export class UI {
     fillForm({ ...initial, names: n });
     country.addEventListener('input', () => {
       if (!codeTouched) code.value = deriveCode(country.value);
-      $('.t-cname').textContent = country.value || 'Your country';
+      $('.t-cname').textContent = country.value || U('title.countryFallback');
     });
     code.addEventListener('input', () => {
       code.value = code.value.toUpperCase().replace(/[^A-Z]/g, '');
@@ -177,12 +189,12 @@ export class UI {
 
   about() {
     const el = this.mount(`<div class="overlay"><div class="title-card glass">
-      <h2>About this simulation</h2>
-      <p>A learning tool that turns the WHO SMART Trust onboarding process into choices a country team makes. Step numbers refer to the published process at smart.who.int/trust, which remains the authority. The GDHCN Administrative and Operational Framework is authoritative for definitions.</p>
-      <p>Simplifications: steps are grouped into moments, some checks are shown at a convenient point in the story, and game days are illustrative.</p>
-      <button class="primary">Close</button>
-      ${catsFound().length ? `<p class="built-by">🐾 Cats found: ${catsFound().length} of 3</p>` : ''}
-      <p class="built-by">Built by <a href="https://osforge.co.za" target="_blank" rel="noopener">OS Forge</a></p></div></div>`);
+      <h2>${U('about.h2')}</h2>
+      <p>${U('about.p1')}</p>
+      <p>${U('about.p2')}</p>
+      <button class="primary">${U('about.close')}</button>
+      ${catsFound().length ? `<p class="built-by">${U('about.cats', { n: catsFound().length })}</p>` : ''}
+      <p class="built-by">${U('about.builtBy')} <a href="https://osforge.co.za" target="_blank" rel="noopener">${U('about.osforge')}</a></p></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
   }
 
@@ -193,9 +205,9 @@ export class UI {
   hud(m: Moment) {
     const r = ROLES[m.role];
     this.hudEl.innerHTML = `
-      <div class="hud-top"><span class="chip phase-${m.phase}">${m.phase} · ${PHASES[m.phase]}</span><span class="chip steps">WHO ${m.steps}</span></div>
+      <div class="hud-top"><span class="chip phase-${m.phase}">${m.phase} · ${PHASES[m.phase]}</span><span class="chip steps">${U('hud.chipSteps', { steps: m.steps })}</span></div>
       <div class="hud-title">${m.title}</div>
-      <div class="hud-role"><span class="avatar r-${m.role}">${r.initials}</span>${m.role === 'who' ? 'WHO does this part' : `${r.name} · ${r.title}`}</div>`;
+      <div class="hud-role"><span class="avatar r-${m.role}">${r.initials}</span>${m.role === 'who' ? r.title : U('hud.role', { name: r.name, title: r.title })}</div>`;
   }
 
   stats(days: number, detours: number) {
@@ -215,13 +227,13 @@ export class UI {
   /** Ask before throwing away a run in progress. Resolves true to go ahead. */
   private confirmLeave(where: 'restart' | 'home'): Promise<boolean> {
     const days = this.statsEl.querySelector('#days')!.textContent;
-    const lost = `Your progress in this run (${days} game days, ${this.detourCount} detour${this.detourCount === 1 ? '' : 's'}) will be lost.`;
+    const lost = U('confirm.lost', { days: days ?? 0, n: this.detourCount });
     const copy = where === 'restart'
-      ? { h: 'Restart onboarding?', p: `${lost} You start again at the Statement of Interest, with the same country and team.`, ok: '↺ Restart' }
-      : { h: 'Go back to the start?', p: `${lost} You return to the title screen; your country and team names are kept.`, ok: '⌂ Go home' };
+      ? { h: U('confirm.restartTitle'), p: `${lost} ${U('confirm.restartBody')}`, ok: U('confirm.restartOk') }
+      : { h: U('confirm.homeTitle'), p: `${lost} ${U('confirm.homeBody')}`, ok: U('confirm.homeOk') };
     const el = this.mount(`<div class="overlay confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-h"><div class="title-card glass">
       <h2 id="confirm-h">${copy.h}</h2><p>${copy.p}</p>
-      <div class="confirm-actions"><button class="primary" data-ok>${copy.ok}</button><button class="ghost" data-cancel>Cancel</button></div></div></div>`);
+      <div class="confirm-actions"><button class="primary" data-ok>${copy.ok}</button><button class="ghost" data-cancel>${U('confirm.cancel')}</button></div></div></div>`);
     return new Promise(done => {
       const close = (ok: boolean) => { removeEventListener('keydown', onKey); el.remove(); done(ok); };
       const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(false); };
@@ -246,17 +258,17 @@ export class UI {
   private header(m: Moment) {
     const r = ROLES[m.role];
     return `<div class="desk-head"><span class="avatar r-${m.role}">${r.initials}</span>
-      <div><div class="desk-who">${m.role === 'who' ? 'WHO' : r.name}</div><div class="desk-sub">${m.role === 'who' ? 'Watch what WHO does' : r.title}</div></div>
-      <span class="chip steps">WHO ${m.steps}</span></div>
+      <div><div class="desk-who">${m.role === 'who' ? U('desk.whoName') : r.name}</div><div class="desk-sub">${m.role === 'who' ? U('desk.whoSub') : r.title}</div></div>
+      <span class="chip steps">${U('hud.chipSteps', { steps: m.steps })}</span></div>
       <h2>${m.title}</h2><p class="brief">${T(m.brief)}</p>
       ${m.docs ? `<div class="docs">${m.docs.map(docHtml).join('')}</div>` : ''}`;
   }
 
   ask(m: Moment, disabled: Set<string>): Promise<string> {
-    const choices = m.choices!.map(c => `<button class="choice" data-id="${c.id}" ${disabled.has(c.id) ? 'disabled' : ''}>${c.text}${disabled.has(c.id) ? '<span class="tried">tried</span>' : ''}</button>`).join('');
+    const choices = m.choices!.map(c => `<button class="choice" data-id="${c.id}" ${disabled.has(c.id) ? 'disabled' : ''}>${c.text}${disabled.has(c.id) ? `<span class="tried">${U('desk.tried')}</span>` : ''}</button>`).join('');
     const previews = devOn() ? m.choices!.filter(c => !c.correct).map(c =>
-      `<button class="dev-preview" data-p="${c.id}">preview: ${c.flag ? 'delayed set-back' : 'set-back'} for "${stripTips(c.text).slice(0, 48)}${c.text.length > 48 ? '…' : ''}"</button>`).join('') : '';
-    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">DEV</span>${previews}</div>` : ''}`);
+      `<button class="dev-preview" data-p="${c.id}">${U('dev.preview', { kind: U(c.flag ? 'dev.previewDelayed' : 'dev.previewNow'), text: stripTips(c.text).slice(0, 48), more: c.text.length > 48 ? '…' : '' })}</button>`).join('') : '';
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="choices">${shuffle(choices)}</div>${previews ? `<div class="dev-previews"><span class="dev-chip">${U('dev.chip')}</span>${previews}</div>` : ''}`);
     this.deskEl.querySelectorAll<HTMLButtonElement>('.dev-preview').forEach(b => b.addEventListener('click', () => {
       const c = m.choices!.find(x => x.id === b.dataset.p)!;
       if (c.consequence) this.preview(c.consequence);
@@ -281,7 +293,7 @@ export class UI {
     this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><div class="checks">${items}</div>
       ${cl.note ? `<p class="check-note">${cl.note}</p>` : ''}
       ${marks ? '<div class="check-sum"></div>' : ''}
-      <button class="primary send">${cl.button ?? 'Send the Letter to WHO'}</button>`);
+      <button class="primary send">${cl.button ?? U('desk.send')}</button>`);
     const boxes = [...this.deskEl.querySelectorAll<HTMLInputElement>('.check input')];
     const sum = this.deskEl.querySelector<HTMLElement>('.check-sum');
     const sync = () => {
@@ -298,7 +310,7 @@ export class UI {
         noDom = !cl.items.some((it, i) => it.domain && on(i));
         boxes.forEach((b, i) => { if (cl.items[i].domain) b.closest('label')!.classList.toggle('warn', noDom); });
       }
-      const parts = [toRemove ? `${toRemove} to remove` : '', missing ? `${missing} missing` : '', noDom ? 'pick at least one trust domain' : ''].filter(Boolean);
+      const parts = [toRemove ? U('desk.sumRemove', { n: toRemove }) : '', missing ? U('desk.sumMissing', { n: missing }) : '', noDom ? U('desk.sumDomain') : ''].filter(Boolean);
       sum!.textContent = parts.join(', ');
       sum!.hidden = !parts.length;
     };
@@ -312,7 +324,7 @@ export class UI {
   }
 
   watch(m: Moment): Promise<void> {
-    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><button class="primary go">Watch</button>`);
+    this.openDesk(`${this.header(m)}<div class="prompt">${T(m.prompt)}</div><button class="primary go">${U('desk.watch')}</button>`);
     return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => done()));
   }
 
@@ -329,27 +341,27 @@ export class UI {
   /** Dev mode: show a set-back panel without playing it (no days, no detour). */
   preview(c: Consequence, opts: { fix?: string; origin?: string } = {}) {
     const el = this.mount(`<div class="overlay"><div class="title-card glass preview-card">
-      <div class="eyebrow">Dev preview · not counted</div>
-      <div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
+      <div class="eyebrow">${U('dev.previewEyebrow')}</div>
+      <div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">${U('returned.by', { by: c.by })}</div><div class="desk-sub">${U('hud.chipSteps', { steps: c.steps })}</div></div><span class="chip bad">${U('returned.days', { days: c.days })}</span></div>
       <h2>${c.title}</h2>
-      ${opts.origin ? `<p class="origin">This would surface later, at its check. The call is made at: <b>${opts.origin}</b>.</p>` : ''}
-      <p><b>What happened.</b> ${T(c.what)}</p>${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
-      <button class="primary">Close preview</button>
+      ${opts.origin ? `<p class="origin">${U('dev.previewOrigin', { origin: `<b>${opts.origin}</b>` })}</p>` : ''}
+      <p><b>${U('returned.what')}</b> ${T(c.what)}</p>${c.why ? `<p><b>${U('returned.why')}</b> ${T(c.why)}</p>` : ''}${opts.fix ? `<p class="fix"><b>${U('returned.fix')}</b> ${T(opts.fix)}</p>` : ''}
+      <button class="primary">${U('dev.previewClose')}</button>
       <button class="desk-cat">${catSvg(catMood(this.detourCount))}</button></div></div>`);
     el.querySelector('button')!.addEventListener('click', () => el.remove());
     this.bindCat(el);
   }
 
   returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<'go' | 'back'> {
-    this.openDesk(`<div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
+    this.openDesk(`<div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">${U('returned.by', { by: c.by })}</div><div class="desk-sub">${U('hud.chipSteps', { steps: c.steps })}</div></div><span class="chip bad">${U('returned.days', { days: c.days })}</span></div>
       <h2>${c.title}</h2>
-      ${opts.origin ? `<p class="origin">This goes back to an earlier call: <b>${opts.origin}</b>. It looked fine at the time.</p>` : ''}
-      <p><b>What happened.</b> ${T(c.what)}</p>
+      ${opts.origin ? `<p class="origin">${U('returned.origin', { origin: `<b>${opts.origin}</b>` })}</p>` : ''}
+      <p><b>${U('returned.what')}</b> ${T(c.what)}</p>
       ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${T(x)}</li>`).join('')}</ul>` : ''}
-      ${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}
-      ${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
-      <div class="ret-actions"><button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button><button class="ghost back">← Back, undo this</button></div>
-      ${catShows() ? `<button class="desk-cat" title="…">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
+      ${c.why ? `<p><b>${U('returned.why')}</b> ${T(c.why)}</p>` : ''}
+      ${opts.fix ? `<p class="fix"><b>${U('returned.fix')}</b> ${T(opts.fix)}</p>` : ''}
+      <div class="ret-actions"><button class="primary go">${opts.fix ? U('desk.fix') : U('desk.tryAgain')}</button><button class="ghost back">${U('desk.back')}</button></div>
+      ${catShows() ? `<button class="desk-cat" title="${U('desk.catTitle')}">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
     this.bindCat(this.deskEl);
     return new Promise(done => {
       for (const k of ['go', 'back'] as const)
@@ -369,27 +381,27 @@ export class UI {
   debrief(d: DebriefData): Promise<void> {
     const lostDays = d.detours.reduce((s, x) => s + x.days, 0);
     const el = this.mount(`<div id="debrief" class="overlay"><div class="debrief-card glass">
-      <div class="eyebrow">Debrief · ${settings().country} is live</div>
-      <h1>${d.detours.length ? `Live, with ${d.detours.length} detour${d.detours.length > 1 ? 's' : ''}` : 'Live, first time'}</h1>
+      <div class="eyebrow">${U('debrief.eyebrow', { country: settings().country })}</div>
+      <h1>${d.detours.length ? U('debrief.h1Detours', { n: d.detours.length }) : U('debrief.h1Clean')}</h1>
       <div class="kpis">
-        <div><span>${d.days}</span>game days</div>
-        <div><span>${d.ideal}</span>ideal route</div>
-        <div><span class="bad">+${lostDays}</span>days on detours</div>
+        <div><span>${d.days}</span>${U('debrief.kpiDays')}</div>
+        <div><span>${d.ideal}</span>${U('debrief.kpiIdeal')}</div>
+        <div><span class="bad">+${lostDays}</span>${U('debrief.kpiLost')}</div>
       </div>
-      <h3>Your route</h3>
+      <h3>${U('debrief.yourRoute')}</h3>
       <div class="route">${routeSvg(MOMENTS.length, d.detours, true)}</div>
-      ${d.detours.length ? `<h3>What sent things back</h3><ol class="detours">${d.detours.map(x =>
-        `<li><b>${x.title}</b> <span class="chip steps">WHO ${x.steps}</span> <span class="chip bad">+${x.days}</span><br>${T(x.why)}${x.origin ? `<br><span class="origin-l">Decision made earlier, at: ${stripTips(x.origin)}</span>` : ''}</li>`).join('')}</ol>` : ''}
-      <h3>Where the keys live</h3>
+      ${d.detours.length ? `<h3>${U('debrief.sentBack')}</h3><ol class="detours">${d.detours.map(x =>
+        `<li><b>${x.title}</b> <span class="chip steps">${U('hud.chipSteps', { steps: x.steps })}</span> <span class="chip bad">+${x.days}</span><br>${T(x.why)}${x.origin ? `<br><span class="origin-l">${U('debrief.origin', { origin: stripTips(x.origin) })}</span>` : ''}</li>`).join('')}</ol>` : ''}
+      <h3>${U('debrief.keysTitle')}</h3>
       <div class="keys">
-        <div class="k-col c-country"><b>${settings().country} keeps</b><ul><li>SCA private key, offline in the vault</li><li>TLS and Upload private keys</li><li>Document Signer private keys</li></ul></div>
-        <div class="k-col c-github"><b>GitHub carries</b><ul><li>Public keys only (PEM)</li><li>A GPG-signed tag</li><li>Read by tng-bot-dev (UAT) and tng-bot (PROD)</li></ul></div>
-        <div class="k-col c-who"><b>WHO holds</b><ul><li>The Trust Anchor, offline and air-gapped</li><li>Your verified people and GPG keys</li></ul></div>
-        <div class="k-col c-network"><b>The Gateway publishes</b><ul><li>Whitelisted public keys</li><li>Trust lists for every participant</li></ul></div>
+        <div class="k-col c-country"><b>${U('debrief.countryKeeps', { country: settings().country })}</b><ul><li>${U('debrief.keep1')}</li><li>${U('debrief.keep2')}</li><li>${U('debrief.keep3')}</li></ul></div>
+        <div class="k-col c-github"><b>${U('debrief.githubCarries')}</b><ul><li>${U('debrief.github1')}</li><li>${U('debrief.github2')}</li><li>${U('debrief.github3')}</li></ul></div>
+        <div class="k-col c-who"><b>${U('debrief.whoHolds')}</b><ul><li>${U('debrief.who1')}</li><li>${U('debrief.who2')}</li></ul></div>
+        <div class="k-col c-network"><b>${U('debrief.gatewayPublishes')}</b><ul><li>${U('debrief.gateway1')}</li><li>${U('debrief.gateway2')}</li></ul></div>
       </div>
-      <h3>What to take back to your team</h3>
+      <h3>${U('debrief.learnTitle')}</h3>
       <ol class="learn">${MOMENTS.filter(m => m.learn).map(m => `<li>${T(m.learn)}</li>`).join('')}</ol>
-      <div class="debrief-actions"><button class="primary again">Finish</button><button class="ghost print">Print this debrief</button></div>
+      <div class="debrief-actions"><button class="primary again">${U('debrief.finish')}</button><button class="ghost print">${U('debrief.print')}</button></div>
     </div></div>`);
     el.querySelector('.print')!.addEventListener('click', () => window.print());
     return new Promise(done => el.querySelector('.again')!.addEventListener('click', () => { el.remove(); done(); }));
@@ -399,32 +411,34 @@ export class UI {
 // ---------- completion splash ----------
 
 const LINKS = [
-  { href: 'https://www.who.int/initiatives/global-digital-health-certification-network', title: 'WHO Global Digital Health Certification Network', sub: 'The live GDHCN page at WHO' },
-  { href: 'https://smart.who.int/trust/', title: 'WHO SMART Trust implementation guide', sub: 'The technical specification behind the network' },
-  { href: 'https://smart.who.int/trust/concepts_onboarding.html', title: 'Onboarding process', sub: 'The steps this simulation follows' },
-  { href: 'https://smart.who.int/trust/concepts_onboarding_checklist.html', title: 'Onboarding checklist', sub: 'Tools, certificates, repositories and tests, hands-on' },
-  { href: 'https://github.com/WorldHealthOrganization/smart-trust', title: 'smart-trust on GitHub', sub: 'Source of the guide, with participant data' },
-  { href: 'https://github.com/WorldHealthOrganization/tng-participant-template', title: 'tng-participant-template', sub: 'Template for your private key repositories' },
-  { href: 'https://github.com/WorldHealthOrganization/GDHCNOnboardingWizard', title: 'WHO Onboarding Wizard (Windows)', sub: 'Repository, GPG and certificate steps on Windows' },
-  { href: 'https://smart.who.int/trust/concepts_onboarding.html#letters-of-application', title: 'Letter of Application templates', sub: 'One per trust domain, in several languages' },
-  { href: 'mailto:gdhcn-secretariat@who.int', title: 'gdhcn-secretariat@who.int', sub: 'Governance: Statement of Interest and Letters' },
-  { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Technical help during onboarding' },
+  { href: 'https://www.who.int/initiatives/global-digital-health-certification-network', k: 1 },
+  { href: 'https://smart.who.int/trust/', k: 2 },
+  { href: 'https://smart.who.int/trust/concepts_onboarding.html', k: 3 },
+  { href: 'https://smart.who.int/trust/concepts_onboarding_checklist.html', k: 4 },
+  { href: 'https://github.com/WorldHealthOrganization/smart-trust', k: 5 },
+  { href: 'https://github.com/WorldHealthOrganization/tng-participant-template', k: 6 },
+  { href: 'mailto:gdhcn-support@who.int', k: 7 },
+  { href: 'https://github.com/WorldHealthOrganization/GDHCNOnboardingWizard', k: 8 },
+  { href: 'https://smart.who.int/trust/concepts_onboarding.html#letters-of-application', k: 9 },
+  { href: 'mailto:gdhcn-secretariat@who.int', k: 10 },
 ];
+/** Display order is the original one; the keys follow the French review transcript (link7 is the support address). */
+const LINK_ORDER = [1, 2, 3, 4, 5, 6, 8, 9, 10, 7];
 
 export function splash(root: HTMLElement, detours = 1, domains: string[] = ['DDCC']): Promise<'again' | 'demo'> {
   const el = document.createElement('div');
   el.id = 'splash';
   el.className = 'overlay';
   el.innerHTML = `<div class="splash-card glass">
-    <div class="splash-badge-wrap"><div class="splash-badge" aria-hidden="true">✓</div>${detours === 0 ? `<span class="splash-cat" title="A perfect run">${catSvg('crown')}</span>` : ''}</div>
-    <div class="eyebrow">Simulation complete</div>
-    <h1>Congratulations. ${settings().country} is live.</h1>
-    <p class="lede">Live in: ${domains.length < 2 ? domains.join('') : `${domains.slice(0, -1).join(', ')} and ${domains[domains.length - 1]}`}.</p>
-    <p class="lede">You took ${settings().country} from a Statement of Interest to the production Trust Network Gateway: eligibility, keys, the Letter of Application, identity checks, WHO's offline signing, testing and go-live.</p>
-    <h3>Take it further</h3>
-    <div class="splash-links">${LINKS.map(l => `<a href="${l.href}" target="_blank" rel="noopener"><b>${l.title}</b><span>${l.sub}</span></a>`).join('')}</div>
-    <p class="fine">This is a learning simulation. The WHO SMART Trust guide and the GDHCN Administrative and Operational Framework are the authority.</p>
-    <div class="title-actions"><button class="primary" data-n="again">Play again</button><button class="ghost" data-n="demo">▶ Watch the demo</button></div>
+    <div class="splash-badge-wrap"><div class="splash-badge" aria-hidden="true">✓</div>${detours === 0 ? `<span class="splash-cat" title="${U('splash.perfect')}">${catSvg('crown')}</span>` : ''}</div>
+    <div class="eyebrow">${U('splash.eyebrow')}</div>
+    <h1>${U('splash.h1', { country: settings().country })}</h1>
+    <p class="lede">${U('splash.liveIn', { domains: joinList(domains) })}</p>
+    <p class="lede">${U('splash.lede', { country: settings().country })}</p>
+    <h3>${U('splash.takeFurther')}</h3>
+    <div class="splash-links">${LINK_ORDER.map(k => LINKS.find(l => l.k === k)!).map(l => `<a href="${l.href}" target="_blank" rel="noopener"><b>${U(`splash.link${l.k}.title`)}</b><span>${U(`splash.link${l.k}.sub`)}</span></a>`).join('')}</div>
+    <p class="fine">${U('splash.fine')}</p>
+    <div class="title-actions"><button class="primary" data-n="again">${U('splash.again')}</button><button class="ghost" data-n="demo">${U('splash.demo')}</button></div>
   </div>`;
   root.appendChild(el);
   return new Promise(done => el.addEventListener('click', e => {
@@ -446,7 +460,7 @@ const GAUGE = '<svg class="dash-icon" viewBox="0 0 24 24" aria-hidden="true"><re
 
 /** A small Grafana-style panel: one bar per certificate, coloured by time left. */
 function dashboardHtml(d: Doc) {
-  const left = (n: number) => (n >= 730 ? `${(n / 365).toFixed(1)} years` : n >= 60 ? `${Math.round(n / 30)} months` : `${n} days`);
+  const left = (n: number) => (n >= 730 ? U('dashboard.years', { n: num(n / 365) }) : n >= 60 ? U('dashboard.months', { n: Math.round(n / 30) }) : U('dashboard.days', { n }));
   const rows = d.lines.map((l, i) => {
     const [label, raw] = l.split('|');
     const n = Number(raw);

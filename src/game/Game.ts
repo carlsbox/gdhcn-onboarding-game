@@ -3,11 +3,13 @@ import { fill, getDomains, liveMoment, resetDomains, setDomains, settings } from
 import { stripTips } from './glossary';
 import { setFeedbackContext } from '../ui/feedback';
 import { PHASES } from './scenario';
+import { t } from '../i18n';
 import type { Consequence, Moment, Travel } from './types';
 import type { World } from '../world/World';
 import { splash, type ChecklistMarks, type Detour, type UI } from '../ui/ui';
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+const SHOULD_NOT = t('ui.ts:desk.extraWrong');
 
 export class Game {
   private index = 0;
@@ -50,9 +52,9 @@ export class Game {
     await this.world.flyTo('home');
     this.ui.strip(MOMENTS.length, this.detours);
     const ideal = MOMENTS.reduce((s, m) => s + m.days, 0);
-    setFeedbackContext({ mode: 'debrief', where: 'Debrief', days: this.days, detours: this.detours.length });
+    setFeedbackContext({ mode: 'debrief', where: t('feedback.ts:ctx.debrief'), days: this.days, detours: this.detours.length });
     await this.ui.debrief({ days: this.days, ideal, detours: this.detours });
-    setFeedbackContext({ mode: 'debrief', where: 'Completion splash', days: this.days, detours: this.detours.length });
+    setFeedbackContext({ mode: 'debrief', where: t('feedback.ts:ctx.splash'), days: this.days, detours: this.detours.length });
     const next = await splash(document.getElementById('app')!, this.detours.length, getDomains());
     location.hash = next === 'demo' ? 'demo' : '';
     location.reload();
@@ -60,7 +62,7 @@ export class Game {
 
   private refresh(m: Moment) {
     setFeedbackContext({
-      mode: 'game', where: `Game · ${m.phase} · ${m.title}`, phase: `${m.phase} · ${PHASES[m.phase]}`,
+      mode: 'game', where: t('feedback.ts:ctx.game', { phase: m.phase, title: m.title }), phase: `${m.phase} · ${PHASES[m.phase]}`,
       moment: `${m.id} · ${m.title}`, steps: m.steps, days: this.days, detours: this.detours.length,
     });
     this.ui.hud(m);
@@ -92,9 +94,9 @@ export class Game {
           break;
         }
         const extra = [
-          ...wrongIdx.map(i => `Should not be there: ${items[i].text}. ${items[i].why ?? ''}`),
-          ...missingIdx.map(i => `Missing: ${items[i].text}`),
-          ...(noDomains ? ['Pick at least one trust domain.'] : []),
+          ...wrongIdx.map(i => `${SHOULD_NOT} ${items[i].text}. ${items[i].why ?? ''}`),
+          ...missingIdx.map(i => `${t('ui.ts:desk.extraMissing')} ${items[i].text}`),
+          ...(noDomains ? [t('ui.ts:desk.extraDomain')] : []),
         ];
         marks = { picked: [...picked], wrong: wrongIdx, missing: missingIdx, noDomains };
         await this.setBack(m, cl.consequence, { extra });
@@ -124,7 +126,7 @@ export class Game {
     }
     if (c.bot) this.world.bot.setMood('error');
     this.days += c.days;
-    const why = c.why || opts.extra?.filter(x => x.startsWith('Should not')).join(' ') || c.what;
+    const why = c.why || opts.extra?.filter(x => x.startsWith(SHOULD_NOT)).join(' ') || c.what;
     const detour: Detour = { index: this.index, title: c.title, steps: c.steps, why, days: c.days, origin: opts.origin };
     this.detours.push(detour);
     this.refresh(m);
@@ -151,7 +153,7 @@ export class Game {
       if (chk.flag === 'webtag' || !this.flags.has(chk.flag)) continue;
       await this.setBack(m, chk.consequence, { fix: chk.fix, origin: this.flaggedAt.get(chk.flag) });
       this.flags.delete(chk.flag);
-      this.ui.toast('Fixed and resent.', 'info', 2200);
+      this.ui.toast(t('Game.ts:fixed'), 'info', 2200);
     }
 
     if (s.travel?.length) {
@@ -166,7 +168,7 @@ export class Game {
     if (s.effect === 'live') {
       this.world.pulseGateway('prod', '#4fe0a0');
       this.world.bot.setMood('happy');
-      this.ui.toast(`<b>${settings().country} is live</b> on the production Trust Network Gateway.`, 'ok', 4200);
+      this.ui.toast(t('Game.ts:live', { country: settings().country }), 'ok', 4200);
       await wait(2200);
       this.world.bot.setMood('idle');
       return;
@@ -193,7 +195,7 @@ export class Game {
     }
     bot.setMood('happy');
     await wait(1400);
-    await this.world.travel([['github-ops', 1]], 'Public keys, tag verified', 'key');
+    await this.world.travel([['github-ops', 1]], t('Demo.ts:parcel.6a'), 'key');
     await this.world.botTo('ops');
     bot.setMood('idle');
   }

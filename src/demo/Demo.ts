@@ -4,7 +4,18 @@ import { lang, t } from '../i18n';
 
 const M = (k: string, v?: Record<string, string | number>) => t(`Demo.ts:${k}`, v);
 
-const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+// Playback speed (1 outside the demo). Every demo wait is expressed in 1x milliseconds and
+// is consumed in short slices at the current speed, so a change mid-wait applies at once.
+let speed = 1;
+const wait = (ms: number) => new Promise<void>(r => {
+  let left = ms, last = performance.now();
+  const step = () => {
+    const now = performance.now();
+    left -= (now - last) * speed; last = now;
+    if (left <= 0) r(); else setTimeout(step, Math.min(left / speed, 50));
+  };
+  setTimeout(step, Math.min(ms / speed, 50));
+});
 
 interface Beat {
   title: string;
@@ -104,6 +115,8 @@ const BEATS: Beat[] = [
 ];
 
 const VOICE_KEY = 'gdhcn-demo-voice';
+const SPEED_KEY = 'gdhcn-demo-speed';
+const SPEEDS = [1, 1.25, 1.5, 2];
 
 /** True when the URL really serves audio (a dev server answers unknown paths with index.html, so check the type). */
 const audioProbe = new Map<string, Promise<boolean>>();
@@ -161,6 +174,7 @@ export class Demo {
         <button data-a="play" title="${M('bar.pause')}" class="demo-play">⏸</button>
         <button data-a="next" title="${M('bar.next')}">⏭</button>
         <div class="demo-dots">${BEATS.map((_, i) => `<button data-i="${i}" title="${BEATS[i].title}"></button>`).join('')}</div>
+        <select class="demo-speed" aria-label="${M('bar.speed')}" title="${M('bar.speed')}">${SPEEDS.map(v => `<option value="${v}">${v}×</option>`).join('')}</select>
         <button data-a="voice" title="${M('bar.voice')}" class="demo-voice"></button>
         <button data-a="exit" title="${M('bar.exit')}">✕</button>
       </div>
@@ -179,7 +193,28 @@ export class Demo {
       }
     });
     this.renderVoice();
+    let saved = 1;
+    try { saved = Number(sessionStorage.getItem(SPEED_KEY)); } catch { /* default 1x */ }
+    const sel = this.el.querySelector<HTMLSelectElement>('.demo-speed')!;
+    this.setSpeed(SPEEDS.includes(saved) ? saved : 1);
+    sel.value = String(speed);
+    sel.addEventListener('change', () => {
+      this.setSpeed(Number(sel.value));
+      try { sessionStorage.setItem(SPEED_KEY, String(speed)); } catch { /* not fatal */ }
+      sel.blur();
+    });
   }
+
+  /** One time-scale for everything: waits, caption hold, world animation and the narration clip. */
+  private setSpeed(v: number) {
+    speed = v;
+    this.world.timeScale = v;
+    const a = this.audio as HTMLAudioElement & { mozPreservesPitch?: boolean; webkitPreservesPitch?: boolean };
+    a.playbackRate = v;
+    a.preservesPitch = true; a.mozPreservesPitch = true; a.webkitPreservesPitch = true;
+  }
+
+  private resetSpeed() { speed = 1; this.world.timeScale = 1; }
 
   /** Runs the demo; resolves with what the viewer chose at the end. */
   run(): Promise<'play' | 'again' | 'title'> {
@@ -209,7 +244,7 @@ export class Demo {
 
     // hold the caption long enough to read (or until Naomi finishes), and while paused
     const readMs = Math.min(11000, Math.max(4500, body.length * 55));
-    while (!dead() && (performance.now() - started < readMs || this.paused || (this.sound && this.speaking))) await wait(200);
+    while (!dead() && ((performance.now() - started) * speed < readMs || this.paused || (this.sound && this.speaking))) await wait(200);
     if (!dead()) await wait(600);
     if (dead()) return;
     if (i < BEATS.length - 1) this.play(i + 1); else this.end();
@@ -232,7 +267,7 @@ export class Demo {
       if (gen !== this.gen || !box.isConnected) { clearInterval(timer); return; }
       // follow the narration clip when it is running (muted still advances); otherwise the wall clock
       const a = this.audio;
-      const t = a.currentTime > 0 || !a.paused ? a.currentTime : (performance.now() - started) / 1000;
+      const t = a.currentTime > 0 || !a.paused ? a.currentTime : (performance.now() - started) * speed / 1000;
       tiles.forEach((el, n) => {
         const lit = t >= CAST[n].at;
         const isNow = lit && (n === CAST.length - 1 || t < CAST[n + 1].at);
@@ -298,6 +333,7 @@ export class Demo {
     }
     this.audio.src = `${import.meta.env.BASE_URL}${file}`;
     this.audio.muted = !this.sound;
+    this.audio.playbackRate = speed; // setting src can reset it
     this.speaking = true; // until the clip ends or fails to load
     this.audio.play().catch(e => this.blocked(e));
   }
@@ -321,6 +357,7 @@ export class Demo {
 
   private stop() {
     this.gen++;
+    this.resetSpeed();
     this.el.querySelector('.demo-cast')?.remove();
     this.audio.pause();
     this.world.cancelAll();
@@ -329,6 +366,7 @@ export class Demo {
 
   private end() {
     this.gen++;
+    this.resetSpeed();
     this.audio.pause();
     const card = document.createElement('div');
     card.className = 'overlay';

@@ -7,4 +7,5 @@ export const frManual: Record<string, string> = {
   'settings.ts:domains.and': ' et ',
   'settings.ts:letter.one': '{n} lettre',
   'settings.ts:letter.other': '{n} lettres',
+  'Demo.ts:bar.speed': 'Vitesse de lecture',
 };

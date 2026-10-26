@@ -304,6 +304,7 @@ export const en: Record<string, string> = {
   "Demo.ts:bar.pause": "Pause",
   "Demo.ts:bar.next": "Next",
   "Demo.ts:bar.voice": "Narration on or off",
+  "Demo.ts:bar.speed": "Playback speed",
   "Demo.ts:bar.exit": "Leave the demo",
   "Demo.ts:tapForSound": "🔊 Tap for sound",
   "Demo.ts:meta": "{i} of {total}",

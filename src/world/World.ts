@@ -49,6 +49,8 @@ export class World {
   private parcels: { update: (dt: number) => boolean; cancel: () => void }[] = [];
   private countryLabel!: HTMLElement;
   private ministrySignMesh!: THREE.Mesh;
+  /** Demo playback speed; 1 everywhere else. Scales flights, parcels, the bot and timed pulses. */
+  timeScale = 1;
   private clock = new THREE.Clock();
   private home = { pos: new THREE.Vector3(), target: new THREE.Vector3(0, 0, 1.8) };
   private marker: THREE.Mesh;
@@ -340,7 +342,7 @@ export class World {
                 phase = 'hold'; t = 0;
                 card.classList.add('bad');
                 card.innerHTML = `<span class="w-parcel-dot"></span>${opts.bounce}`;
-                legs.forEach(([id]) => this.flashing.set(id, this.clock.elapsedTime + 2.6));
+                legs.forEach(([id]) => this.flashing.set(id, this.clock.elapsedTime + 2.6 / this.timeScale));
               } else { g.removeFromParent(); card.remove(); done(); return false; }
             }
           } else if (t > 1.2) { phase = 'return'; t = 0; }
@@ -374,10 +376,10 @@ export class World {
 
   pulseGateway(which: 'uat' | 'prod', color: string) {
     const ring = this.gatewayRings[which === 'uat' ? 0 : 1];
-    ring.userData.flash = { color: new THREE.Color(color).multiplyScalar(3), until: this.clock.elapsedTime + 2.5 };
+    ring.userData.flash = { color: new THREE.Color(color).multiplyScalar(3), until: this.clock.elapsedTime + 2.5 / this.timeScale };
   }
 
-  pulseAnchor() { this.anchor.userData.pulseUntil = this.clock.elapsedTime + 3; }
+  pulseAnchor() { this.anchor.userData.pulseUntil = this.clock.elapsedTime + 3 / this.timeScale; }
 
   /** Bot flies between WHO Operations and the GitHub island along the purple road. */
   botTo(where: 'github' | 'ops'): Promise<void> {
@@ -469,7 +471,7 @@ export class World {
   }
 
   private loop = () => {
-    const dt = Math.min(this.clock.getDelta(), 0.25), now = this.clock.elapsedTime;
+    const dt = Math.min(this.clock.getDelta(), 0.25) * this.timeScale, now = this.clock.elapsedTime;
     for (const b of this.badges) { b.position.y = 2.3 + Math.sin(now * 1.4) * 0.12; b.rotation.y = Math.sin(now * 0.6) * 0.35; }
     for (const r of this.gatewayRings) {
       const f = r.userData.flash as { color: THREE.Color; until: number } | undefined;

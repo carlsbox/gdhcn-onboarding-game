@@ -141,7 +141,7 @@ const ICON = {
 // Until then the French set is a copy of the English one.
 const CUES = {
   en: { roles: [3.1, 4.3, 6.8, 8.7], certs: 13.8, vault: 20.7 },
-  fr: { roles: [3.1, 4.3, 6.8, 8.7], certs: 13.8, vault: 20.7 },
+  fr: { roles: [2.5, 4.1, 5.8, 7.4], certs: 10.5, vault: 19.4 }, // from the pauses in Hélène's take of beat-02
 }[lang()];
 const CAST = (['business', 'legal', 'technical', 'keymaster'] as const).map((k, n) => (
   { k, role: M(`cast.${k}.role`), duty: M(`cast.${k}.duty`), at: CUES.roles[n] }));

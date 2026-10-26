@@ -172,7 +172,7 @@ export class Game {
 
   private async botCollect(m: Moment) {
     const bot = this.world.bot;
-    await this.world.flyTo('github', { dur: 1.2 });
+    await this.world.flyTo('github', { dur: 1.2, zoomOut: 1.15 });
     await this.world.botTo('github');
     bot.setMood('checking');
     await wait(2200);
@@ -182,7 +182,7 @@ export class Game {
       await wait(900);
       await this.setBack(m, chk.consequence, { fix: chk.fix, origin: this.flaggedAt.get('webtag') });
       this.flags.delete('webtag');
-      await this.world.flyTo('github', { dur: 1 });
+      await this.world.flyTo('github', { dur: 1, zoomOut: 1.15 });
       bot.setMood('checking');
       await wait(1800);
     }

@@ -400,6 +400,7 @@ const LINKS = [
   { href: 'https://smart.who.int/trust/concepts_onboarding_checklist.html', title: 'Onboarding checklist', sub: 'Tools, certificates, repositories and tests, hands-on' },
   { href: 'https://github.com/WorldHealthOrganization/smart-trust', title: 'smart-trust on GitHub', sub: 'Source of the guide, with participant data' },
   { href: 'https://github.com/WorldHealthOrganization/tng-participant-template', title: 'tng-participant-template', sub: 'Template for your private key repositories' },
+  { href: 'https://github.com/WorldHealthOrganization/GDHCNOnboardingWizard', title: 'WHO Onboarding Wizard (Windows)', sub: 'Repository, GPG and certificate steps on Windows' },
   { href: 'https://smart.who.int/trust/concepts_onboarding.html#letters-of-application', title: 'Letter of Application templates', sub: 'One per trust domain, in several languages' },
   { href: 'mailto:gdhcn-secretariat@who.int', title: 'gdhcn-secretariat@who.int', sub: 'Governance: Statement of Interest and Letters' },
   { href: 'mailto:gdhcn-support@who.int', title: 'gdhcn-support@who.int', sub: 'Technical help during onboarding' },

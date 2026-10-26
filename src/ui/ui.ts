@@ -123,9 +123,10 @@ export class UI {
         <div class="eyebrow">See it in action</div>
         <p class="side-lede">Short films showing what onboarding involves and what the network does once a country is live.</p>
         <button class="side-tile" id="side-demo">
-          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">4 min</span></span>
+          <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}video/demo-overview.jpg')"><span class="uc-play">▶</span><span class="uc-len">3 min</span></span>
           <span class="side-text"><span class="uc-tag">Narrated demo · this game</span><b>How onboarding works</b><span class="uc-sub">The ideal path from first email to go-live, in nine steps</span></span>
         </button>
+        <a class="side-dl" href="${import.meta.env.BASE_URL}video/join-the-network-demo-en.mp4" download>⬇ Download the narrated demo as MP4 (6 MB)</a>
         ${USE_CASES.map(u => `<button class="side-tile" data-uc="${u.id}">
           <span class="side-thumb" style="background-image:url('${import.meta.env.BASE_URL}${u.poster}')"><span class="uc-play">▶</span><span class="uc-len">${u.minutes}</span></span>
           <span class="side-text"><span class="uc-tag">${u.tag}</span><b>${u.title}</b><span class="uc-sub">${u.subtitle}</span></span>
@@ -339,7 +340,7 @@ export class UI {
     this.bindCat(el);
   }
 
-  returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<void> {
+  returned(c: Consequence, opts: { fix?: string; extra?: string[]; origin?: string } = {}): Promise<'go' | 'back'> {
     this.openDesk(`<div class="ret-head"><span class="ret-icon">!</span><div><div class="ret-by">Returned by ${c.by}</div><div class="desk-sub">WHO ${c.steps}</div></div><span class="chip bad">+${c.days} days</span></div>
       <h2>${c.title}</h2>
       ${opts.origin ? `<p class="origin">This goes back to an earlier call: <b>${opts.origin}</b>. It looked fine at the time.</p>` : ''}
@@ -347,10 +348,13 @@ export class UI {
       ${opts.extra?.length ? `<ul class="extra">${opts.extra.map(x => `<li>${T(x)}</li>`).join('')}</ul>` : ''}
       ${c.why ? `<p><b>Why.</b> ${T(c.why)}</p>` : ''}
       ${opts.fix ? `<p class="fix"><b>The fix.</b> ${T(opts.fix)}</p>` : ''}
-      <button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button>
+      <div class="ret-actions"><button class="primary go">${opts.fix ? 'Fix it and resend' : 'Try again'}</button><button class="ghost back">← Back, undo this</button></div>
       ${catShows() ? `<button class="desk-cat" title="…">${catSvg(catMood(this.detourCount))}</button>` : ''}`, 'returned');
     this.bindCat(this.deskEl);
-    return new Promise(done => this.deskEl.querySelector('.go')!.addEventListener('click', () => { this.hideDesk(); done(); }));
+    return new Promise(done => {
+      for (const k of ['go', 'back'] as const)
+        this.deskEl.querySelector(`.${k}`)!.addEventListener('click', () => { this.hideDesk(); done(k); });
+    });
   }
 
   toast(html: string, tone: 'ok' | 'info' | 'bad' = 'ok', ms = 3200) {

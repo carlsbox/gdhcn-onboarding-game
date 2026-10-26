@@ -60,7 +60,7 @@ export class UseCasesPage {
     try { return sessionStorage.getItem('uc-lang') === 'fr' ? 'fr' : 'en'; } catch { return 'en'; }
   }
 
-  /** Switch the film language: swap src, pause, back to the start. The poster attribute is kept. */
+  /** Switch the film language: swap src and poster, pause, back to the start. */
   private setLang(lang: 'en' | 'fr') {
     try { sessionStorage.setItem('uc-lang', lang); } catch { /* ignore */ }
     const v = this.el.querySelector<HTMLVideoElement>('video.uc-video');
@@ -68,6 +68,7 @@ export class UseCasesPage {
     const uc = USE_CASES.find(u => u.id === id);
     if (!v || !uc?.videoFr) return;
     v.pause();
+    v.poster = asset(lang === 'fr' ? uc.posterFr ?? uc.poster : uc.poster);
     v.src = asset(lang === 'fr' ? uc.videoFr : uc.video);
     v.load();
     v.currentTime = 0;
@@ -104,7 +105,7 @@ export class UseCasesPage {
       <h1>${u.title}</h1>
       <p class="uc-sub big">${u.subtitle}</p>
       ${langSwitch}
-      <video class="uc-video" controls playsinline preload="metadata" poster="${asset(u.poster)}" src="${asset(src)}"></video>
+      <video class="uc-video" controls playsinline preload="metadata" poster="${asset(lang === 'fr' ? u.posterFr ?? u.poster : u.poster)}" src="${asset(src)}"></video>
       <blockquote class="uc-idea">${u.idea}</blockquote>
       <h3>What the film shows</h3>
       <p>${u.summary}</p>

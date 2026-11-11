@@ -7,7 +7,6 @@ Built for the GDHCN onboarding workshop (Kigali) and for ministry teams to repla
 ## Live
 
 - **Game:** https://gdhcn-join-the-network.netlify.app (Netlify project `gdhcn-join-the-network`, team carlsbox)
-- **Feedback sheet:** https://docs.google.com/spreadsheets/d/170X9_25-5S-s1FZbN8kieRopElHTl72NMmo2o3YUr0Y/edit
 - **Receiver:** Apps Script project "GDHCN game feedback receiver" (standalone), web app deployment "Game feedback v1"
 
 **Deploys are automatic:** the Netlify project is linked to `carlsbox/gdhcn-onboarding-game`, so every push to `main` builds (`npm run build`, see `netlify.toml`) and publishes. The feedback URL is in `.env.production`.

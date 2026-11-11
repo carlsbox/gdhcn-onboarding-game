@@ -2,7 +2,7 @@
 /**
  * Import the reviewed French transcripts into the game.
  *
- *   node scripts/import-fr.mjs [--dir <transcript folder>] [--report <report.json>] [extra-transcript.md ...]
+ *   node scripts/import-fr.mjs [--dir <transcript folder>] (default: $FR_TRANSCRIPTS_DIR, else ./french-localisation) [--report <report.json>] [extra-transcript.md ...]
  *
  * Reads, from the folder:
  *   transcript-fr-site-ui-and-demo.md   UI, demo, use-case pages  (keys `file:identifier`, e.g. `ui.ts:title.lede`)
@@ -29,7 +29,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const opt = n => { const i = args.indexOf(n); return i >= 0 ? args.splice(i, 2)[1] : undefined; };
-const DIR = resolve(opt('--dir') ?? 'french-localisation');
+const DIR = resolve(opt('--dir') ?? process.env.FR_TRANSCRIPTS_DIR ?? join(ROOT, 'french-localisation'));
 const REPORT = resolve(opt('--report') ?? join(DIR, '_i18n-import-report.json'));
 const EXTRA = args.filter(a => a.endsWith('.md')).map(a => resolve(a));
 
